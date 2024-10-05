@@ -191,8 +191,6 @@ void put_apacket(apacket* p);
     } while (0)
 #endif
 
-#define DEFAULT_ADB_PORT 5037
-
 #define DEFAULT_ADB_LOCAL_TRANSPORT_PORT 5555
 
 #define ADB_CLASS 0xff

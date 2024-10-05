@@ -150,6 +150,7 @@ static void read_status_line(int fd, char* buf, size_t count) {
 }
 
 static unique_fd send_command(const std::vector<std::string>& cmd_args, std::string* error) {
+    VLOG(ADB) << "pm command: '" << android::base::Join(cmd_args, " ") << "'";
     if (is_abb_exec_supported()) {
         return send_abb_exec_command(cmd_args, error);
     } else {
