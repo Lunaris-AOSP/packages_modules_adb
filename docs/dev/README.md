@@ -4,3 +4,4 @@
 - [Debugging](debugging.md)
 - [How root/unroot works](root.md)
 - [Understanding asocket](asocket.md)
+- [Trade-In Mode](adb_tradeinmode.md)

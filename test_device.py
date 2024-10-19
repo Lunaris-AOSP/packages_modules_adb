@@ -1846,13 +1846,9 @@ class DevicesListing(DeviceTest):
 
 class DevicesListing(DeviceTest):
 
-    serial = subprocess.check_output(['adb', 'get-serialno']).strip().decode("utf-8")
-
     def test_track_app_appinfo(self):
-        return # Disabled until b/301491148 is fixed.
-        # (Exported FeatureFlags cannot be read-only)
-        subprocess.check_output(['adb', 'install', '-t', 'adb1.apk']).strip().decode("utf-8")
-        subprocess.check_output(['adb', 'install', '-t', 'adb2.apk']).strip().decode("utf-8")
+        subprocess.check_output(['adb', 'install', '-r', '-t', 'adb_test_app1.apk']).strip().decode("utf-8")
+        subprocess.check_output(['adb', 'install', '-r', '-t', 'adb_test_app2.apk']).strip().decode("utf-8")
         subprocess.check_output(['adb', 'shell', 'am', 'start', '-W', 'adb.test.app1/.MainActivity']).strip().decode("utf-8")
         subprocess.check_output(['adb', 'shell', 'am', 'start', '-W', 'adb.test.app2/.MainActivity']).strip().decode("utf-8")
         subprocess.check_output(['adb', 'shell', 'am', 'start', '-W', 'adb.test.app1/.OwnProcessActivity']).strip().decode("utf-8")

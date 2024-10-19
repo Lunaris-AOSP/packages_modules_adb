@@ -1498,7 +1498,7 @@ HostRequestResult handle_host_request(std::string_view service, TransportType ty
         if (!ParseUint(&port, service)) {
           LOG(ERROR) << "received invalid port for emulator: " << service;
         } else {
-          local_connect(port);
+            connect_emulator(port);
         }
 
         /* we don't even need to send a reply */

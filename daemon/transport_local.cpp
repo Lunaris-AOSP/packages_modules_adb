@@ -81,7 +81,7 @@ void server_socket_thread(std::function<unique_fd(std::string_view, std::string*
             // We don't care about port value in "register_socket_transport" as it is used
             // only from ADB_HOST. "server_socket_thread" is never called from ADB_HOST.
             register_socket_transport(
-                    std::move(fd), std::move(serial), 0, 1,
+                    std::move(fd), std::move(serial), 0, false,
                     [](atransport*) { return ReconnectResult::Abort; }, false);
         }
     }
@@ -97,7 +97,7 @@ void local_init(const std::string& addr) {
     std::thread(server_socket_thread, adb_listen, addr).detach();
 }
 
-int init_socket_transport(atransport* t, unique_fd fd, int adb_port, int local) {
+int init_socket_transport(atransport* t, unique_fd fd, int, bool) {
     t->type = kTransportLocal;
     auto fd_connection = std::make_unique<FdConnection>(std::move(fd));
     t->SetConnection(std::make_unique<BlockingConnectionAdapter>(std::move(fd_connection)));

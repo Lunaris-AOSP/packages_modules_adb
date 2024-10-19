@@ -628,6 +628,7 @@ cc_library {
         "daemon/file_sync_service.cpp",
         "daemon/services.cpp",
         "daemon/shell_service.cpp",
+        "daemon/tradeinmode.cpp",
         "shell_service_protocol.cpp",
     ],
 
@@ -676,6 +677,9 @@ cc_library {
                 "libmdnssd",
                 "libselinux",
             ],
+            static_libs: [
+                "android_trade_in_mode_flags_cc_lib",
+            ],
         },
         recovery: {
             exclude_srcs: [
@@ -684,6 +688,9 @@ cc_library {
             exclude_shared_libs: [
                 "libadb_pairing_auth",
                 "libadb_pairing_connection",
+            ],
+            exclude_static_libs: [
+                "android_trade_in_mode_flags_cc_lib",
             ],
         },
     },
@@ -805,6 +812,14 @@ cc_binary {
                 "libadb_pairing_auth",
                 "libadb_pairing_connection",
             ],
+            exclude_static_libs: [
+                "android_trade_in_mode_flags_cc_lib",
+            ],
+        },
+        android: {
+            static_libs: [
+                "android_trade_in_mode_flags_cc_lib",
+            ],
         },
     },
 }
@@ -893,6 +908,8 @@ cc_test {
         "daemon/services.cpp",
         "daemon/shell_service.cpp",
         "daemon/shell_service_test.cpp",
+        "daemon/tradeinmode.cpp",
+        "daemon/tradeinmode_test.cpp",
         "test_utils/test_utils.cpp",
         "shell_service_protocol_test.cpp",
         "mdns_test.cpp",
@@ -904,6 +921,9 @@ cc_test {
         android: {
             srcs: [
                 "daemon/property_monitor_test.cpp",
+            ],
+            static_libs: [
+                "android_trade_in_mode_flags_cc_lib",
             ],
         },
     },

@@ -51,6 +51,7 @@
 #include "adb_utils.h"
 #include "adb_wifi.h"
 #include "socket_spec.h"
+#include "tradeinmode.h"
 #include "transport.h"
 
 #include "daemon/jdwp_service.h"
@@ -59,6 +60,7 @@
 
 #if defined(__ANDROID__)
 static const char* root_seclabel = nullptr;
+static const char* tim_seclabel = nullptr;
 
 static bool should_drop_privileges() {
     // The properties that affect `adb root` and `adb unroot` are ro.secure and
@@ -158,6 +160,13 @@ static void drop_privileges() {
         }
         if (cap_set_proc(caps.get()) != 0) {
             PLOG(FATAL) << "cap_set_proc() failed";
+        }
+
+        if (should_enter_tradeinmode()) {
+            enter_tradeinmode(tim_seclabel);
+            auth_required = false;
+        } else if (is_in_tradein_evaluation_mode()) {
+            auth_required = false;
         }
     } else {
         // minijail_enter() will abort if any priv-dropping step fails.
@@ -314,6 +323,7 @@ int main(int argc, char** argv) {
     while (true) {
         static struct option opts[] = {
                 {"root_seclabel", required_argument, nullptr, 's'},
+                {"tim_seclabel", required_argument, nullptr, 't'},
                 {"device_banner", required_argument, nullptr, 'b'},
                 {"version", no_argument, nullptr, 'v'},
                 {"logpostfsdata", no_argument, nullptr, 'l'},
@@ -330,6 +340,9 @@ int main(int argc, char** argv) {
 #if defined(__ANDROID__)
             case 's':
                 root_seclabel = optarg;
+                break;
+            case 't':
+                tim_seclabel = optarg;
                 break;
 #endif
             case 'b':

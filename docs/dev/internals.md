@@ -107,6 +107,10 @@ Despite its name the `sync` protocol is also what powers operations such as `pul
 
 [here](adb_wifi.md)
 
+### ADB Trade-In Mode
+
+[here](adb_tradeinmode.md)
+
 ### Benchmark sample run for Pixel 8,USB
 
 ```

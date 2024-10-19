@@ -146,9 +146,6 @@ int launch_server(const std::string& socket_spec, const char* one_device);
 int adb_server_main(int is_daemon, const std::string& socket_spec, const char* one_device,
                     int ack_reply_fd);
 
-/* initialize a transport object's func pointers and state */
-int init_socket_transport(atransport* t, unique_fd s, int port, int local);
-
 std::string getEmulatorSerialString(int console_port);
 #if ADB_HOST
 atransport* find_emulator_transport_by_adb_port(int adb_port);
@@ -201,8 +198,8 @@ void put_apacket(apacket* p);
 #define ADB_DBC_SUBCLASS 0x2
 
 void local_init(const std::string& addr);
-bool local_connect(int port);
-int local_connect_arbitrary_ports(int console_port, int adb_port, std::string* error);
+bool connect_emulator(int port);
+int connect_emulator_arbitrary_ports(int console_port, int adb_port, std::string* error);
 
 extern const char* adb_device_banner;
 

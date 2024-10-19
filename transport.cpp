@@ -1488,14 +1488,14 @@ bool validate_transport_list(const std::list<atransport*>& list, const std::stri
     return true;
 }
 
-bool register_socket_transport(unique_fd s, std::string serial, int port, int local,
+bool register_socket_transport(unique_fd s, std::string serial, int port, bool is_emulator,
                                atransport::ReconnectCallback reconnect, bool use_tls, int* error) {
     atransport* t = new atransport(std::move(reconnect), kCsOffline);
     t->use_tls = use_tls;
     t->serial = std::move(serial);
 
     D("transport: %s init'ing for socket %d, on port %d", t->serial.c_str(), s.get(), port);
-    if (init_socket_transport(t, std::move(s), port, local) < 0) {
+    if (init_socket_transport(t, std::move(s), port, is_emulator) < 0) {
         delete t;
         if (error) *error = errno;
         return false;
@@ -1519,8 +1519,7 @@ bool register_socket_transport(unique_fd s, std::string serial, int port, int lo
 #endif
     register_transport(t);
 
-    if (local == 1) {
-        // Do not wait for emulator transports.
+    if (is_emulator) {
         return true;
     }
 
