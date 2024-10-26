@@ -56,6 +56,7 @@
 
 #include "daemon/jdwp_service.h"
 #include "daemon/mdns.h"
+#include "daemon/transport_daemon.h"
 #include "daemon/watchdog.h"
 
 #if defined(__ANDROID__)
@@ -203,7 +204,7 @@ static void setup_adb(const std::vector<std::string>& addrs) {
 #endif
     for (const auto& addr : addrs) {
         LOG(INFO) << "adbd listening on " << addr;
-        local_init(addr);
+        init_transport_socket_server(addr);
     }
 }
 

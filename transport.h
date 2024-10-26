@@ -534,10 +534,4 @@ asocket* create_device_tracker(TrackerOutputType type);
 std::string list_transports(TrackerOutputType type);
 #endif
 
-#if !ADB_HOST
-unique_fd adb_listen(std::string_view addr, std::string* error);
-void server_socket_thread(std::function<unique_fd(std::string_view, std::string*)> listen_func,
-                          std::string_view addr);
-#endif
-
 #endif /* __TRANSPORT_H */

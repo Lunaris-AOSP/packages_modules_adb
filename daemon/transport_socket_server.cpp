@@ -38,9 +38,7 @@
 #include <android-base/thread_annotations.h>
 #include <cutils/sockets.h>
 
-#if !ADB_HOST
 #include <android-base/properties.h>
-#endif
 
 #include "adb.h"
 #include "adb_io.h"
@@ -49,16 +47,15 @@
 #include "socket_spec.h"
 #include "sysdeps/chrono.h"
 
-void server_socket_thread(std::function<unique_fd(std::string_view, std::string*)> listen_func,
-                          std::string_view addr) {
-    adb_thread_setname("server socket");
+void server_socket_thread(std::string_view addr) {
+    adb_thread_setname("server_socket");
 
     unique_fd serverfd;
     std::string error;
 
     while (serverfd == -1) {
         errno = 0;
-        serverfd = listen_func(addr, &error);
+        serverfd = unique_fd{socket_spec_listen(addr, &error, nullptr)};
         if (errno == EAFNOSUPPORT || errno == EINVAL || errno == EPROTONOSUPPORT) {
             D("unrecoverable error: '%s'", error.c_str());
             return;
@@ -88,13 +85,9 @@ void server_socket_thread(std::function<unique_fd(std::string_view, std::string*
     D("transport: server_socket_thread() exiting");
 }
 
-unique_fd adb_listen(std::string_view addr, std::string* error) {
-    return unique_fd{socket_spec_listen(addr, error, nullptr)};
-}
-
-void local_init(const std::string& addr) {
-    D("transport: local server init");
-    std::thread(server_socket_thread, adb_listen, addr).detach();
+void init_transport_socket_server(const std::string& addr) {
+    VLOG(TRANSPORT) << "Starting tcp server on '" << addr << "'";
+    std::thread(server_socket_thread, addr).detach();
 }
 
 int init_socket_transport(atransport* t, unique_fd fd, int, bool) {

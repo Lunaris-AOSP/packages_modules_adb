@@ -186,8 +186,7 @@ std::mutex& retry_ports_lock = *new std::mutex;
 std::condition_variable& retry_ports_cond = *new std::condition_variable;
 
 static void client_socket_thread(std::string_view) {
-    adb_thread_setname("client_socket_thread");
-    D("transport: client_socket_thread() starting");
+    adb_thread_setname("emulator_scanner");
     PollAllLocalPortsForEmulator();
     while (true) {
         std::vector<RetryPort> ports;
@@ -228,8 +227,8 @@ static void client_socket_thread(std::string_view) {
     }
 }
 
-void local_init(const std::string& addr) {
-    D("transport: local client init");
+void init_emulator_scanner(const std::string& addr) {
+    VLOG(TRANSPORT) << "Starting emulator scanner on '" << addr << "'";
     std::thread(client_socket_thread, addr).detach();
     adb_local_transport_max_port_env_override();
 }

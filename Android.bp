@@ -275,7 +275,7 @@ cc_library_host_static {
         "client/auth.cpp",
         "client/adb_wifi.cpp",
         "client/usb_libusb.cpp",
-        "client/transport_local.cpp",
+        "client/transport_emulator.cpp",
         "client/mdnsresponder_client.cpp",
         "client/mdns_utils.cpp",
         "client/transport_mdns.cpp",
@@ -432,7 +432,7 @@ cc_defaults {
         "shell_service_protocol.cpp",
     ],
 
-    generated_headers: [
+    device_first_generated_headers: [
         "bin2c_fastdeployagent",
         "bin2c_fastdeployagentscript",
     ],
@@ -552,7 +552,7 @@ cc_library_static {
         "daemon/auth.cpp",
         "daemon/jdwp_service.cpp",
         "daemon/logging.cpp",
-        "daemon/transport_local.cpp",
+        "daemon/transport_socket_server.cpp",
     ],
 
     generated_headers: ["platform_tools_version"],
@@ -984,7 +984,7 @@ python_test_host {
     test_options: {
         unit_test: false,
     },
-    data: [
+    device_common_data: [
         ":adb_test_app1",
         ":adb_test_app2",
     ],

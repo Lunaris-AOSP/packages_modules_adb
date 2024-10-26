@@ -197,7 +197,6 @@ void put_apacket(apacket* p);
 #define ADB_DBC_CLASS 0xDC
 #define ADB_DBC_SUBCLASS 0x2
 
-void local_init(const std::string& addr);
 bool connect_emulator(int port);
 int connect_emulator_arbitrary_ports(int console_port, int adb_port, std::string* error);
 
