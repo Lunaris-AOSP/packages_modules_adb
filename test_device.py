@@ -1888,6 +1888,26 @@ class ServerStatus(unittest.TestCase):
             self.assertTrue("executable_absolute_path" in lines[4])
             self.assertTrue("log_absolute_path" in lines[5])
 
+def invoke(*args):
+    return subprocess.check_output(args).strip().decode("utf-8")
+
+class OneDevice(unittest.TestCase):
+
+    serial = invoke("adb", "get-serialno")
+    owner_server_port = "14424"
+
+    def test_one_device(self):
+        invoke("adb", "kill-server")
+        invoke("adb", "--one-device", self.serial, "-P", self.owner_server_port, "start-server")
+        devices = invoke("adb", "devices")
+        owned_devices = invoke("adb",  "-P", "14424", "devices")
+        self.assertTrue(self.serial in owned_devices)
+        self.assertFalse(self.serial in devices)
+
+    def tearDown(self):
+        invoke("adb",  "-P", self.owner_server_port, "kill-server")
+        invoke("adb",  "kill-server")
+
 if __name__ == '__main__':
     random.seed(0)
     unittest.main()

@@ -108,8 +108,8 @@ enum ConnectionState {
     kCsAuthorizing,     // Authorizing with keys from ADB_VENDOR_KEYS.
     kCsUnauthorized,    // ADB_VENDOR_KEYS exhausted, fell back to user prompt.
     kCsNoPerm,          // Insufficient permissions to communicate with the device.
-    kCsDetached,        // USB device that's detached from the adb server.
-    kCsOffline,
+    kCsDetached,        // USB device detached from the adb server (known but not opened/claimed).
+    kCsOffline,         // A peer has been detected (device/host) but no comm has started yet.
 
     // After CNXN packet, the ConnectionState describes not a state but the type of service
     // on the other end of the transport.

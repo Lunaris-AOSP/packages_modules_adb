@@ -797,11 +797,13 @@ struct LibusbConnection : public Connection {
         }
     }
 
-    virtual void Start() override final {
+    virtual bool Start() override final {
         std::string error;
         if (!Attach(&error)) {
             OnError(error);
+            return false;
         }
+        return true;
     }
 
     virtual void Stop() override final {
@@ -918,7 +920,8 @@ static void process_device(libusb_device* device_raw) {
     VLOG(USB) << "constructed LibusbConnection for device " << connection->serial_ << " ("
               << device_address << ")";
 
-    register_usb_transport(connection, connection->serial_.c_str(), device_address.c_str(), true);
+    register_libusb_transport(connection, connection->serial_.c_str(), device_address.c_str(),
+                              true);
 }
 
 static void device_connected(libusb_device* device) {

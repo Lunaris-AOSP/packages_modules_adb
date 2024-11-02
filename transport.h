@@ -115,7 +115,8 @@ struct Connection {
 
     virtual bool Write(std::unique_ptr<apacket> packet) = 0;
 
-    virtual void Start() = 0;
+    // Return true if the transport successfully started.
+    virtual bool Start() = 0;
     virtual void Stop() = 0;
 
     virtual bool DoTlsHandshake(RSA* key, std::string* auth_key = nullptr) = 0;
@@ -175,7 +176,7 @@ struct BlockingConnectionAdapter : public Connection {
 
     virtual bool Write(std::unique_ptr<apacket> packet) override final;
 
-    virtual void Start() override final;
+    virtual bool Start() override final;
     virtual void Stop() override final;
     virtual bool DoTlsHandshake(RSA* key, std::string* auth_key) override final;
 
@@ -501,8 +502,9 @@ void register_transport(atransport* transport);
 #if ADB_HOST
 void init_usb_transport(atransport* t, usb_handle* usb);
 
-void register_usb_transport(std::shared_ptr<Connection> connection, const char* serial,
-                            const char* devpath, unsigned writeable);
+void register_libusb_transport(std::shared_ptr<Connection> connection, const char* serial,
+                               const char* devpath, unsigned writable);
+
 void register_usb_transport(usb_handle* h, const char* serial, const char* devpath,
                             unsigned writeable);
 

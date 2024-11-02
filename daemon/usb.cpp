@@ -213,7 +213,10 @@ struct UsbFfsConnection : public Connection {
         return true;
     }
 
-    virtual void Start() override final { StartMonitor(); }
+    virtual bool Start() override final {
+        StartMonitor();
+        return true;
+    }
 
     virtual void Stop() override final {
         if (stopped_.exchange(true)) {

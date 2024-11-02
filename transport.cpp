@@ -70,11 +70,12 @@ using TlsError = TlsConnection::TlsError;
 static void remove_transport(atransport* transport);
 static void transport_destroy(atransport* transport);
 
+static auto& transport_lock = *new std::recursive_mutex();
+// When a tranport is created, it is not started yet (and in the case of the host side, it has
+// not yet sent CNXN). These transports are staged in the pending list.
+static auto& pending_list = *new std::list<atransport*>();
 // TODO: unordered_map<TransportId, atransport*>
 static auto& transport_list = *new std::list<atransport*>();
-static auto& pending_list = *new std::list<atransport*>();
-
-static auto& transport_lock = *new std::recursive_mutex();
 
 const char* const kFeatureShell2 = "shell_v2";
 const char* const kFeatureCmd = "cmd";
@@ -301,7 +302,7 @@ BlockingConnectionAdapter::~BlockingConnectionAdapter() {
     Stop();
 }
 
-void BlockingConnectionAdapter::Start() {
+bool BlockingConnectionAdapter::Start() {
     std::lock_guard<std::mutex> lock(mutex_);
     if (started_) {
         LOG(FATAL) << "BlockingConnectionAdapter(" << Serial() << "): started multiple times";
@@ -334,6 +335,7 @@ void BlockingConnectionAdapter::Start() {
     });
 
     started_ = true;
+    return true;
 }
 
 void BlockingConnectionAdapter::StartReadThread() {
@@ -737,11 +739,12 @@ static bool usb_devices_start_detached() {
 #endif
 
 static void fdevent_unregister_transport(atransport* t) {
-    D("transport: %s deleting", t->serial.c_str());
+    VLOG(TRANSPORT) << "unregistering transport: " << t->serial;
 
     {
         std::lock_guard<std::recursive_mutex> lock(transport_lock);
         transport_list.remove(t);
+        pending_list.remove(t);
     }
 
     delete t;
@@ -750,23 +753,39 @@ static void fdevent_unregister_transport(atransport* t) {
 }
 
 static void fdevent_register_transport(atransport* t) {
+    auto state = to_string(t->GetConnectionState());
+    VLOG(TRANSPORT) << "registering: " << t->serial.c_str() << " state=" << state
+                    << " type=" << t->type;
+
     /* don't create transport threads for inaccessible devices */
     if (t->GetConnectionState() != kCsNoPerm) {
         t->connection()->SetTransport(t);
 
-        if (t->type == kTransportUsb
 #if ADB_HOST
-            && usb_devices_start_detached()  // -d setting propagated from the
-                                             // host device, hence n/a on-device.
-#endif
-        ) {
+        if (t->type == kTransportUsb && usb_devices_start_detached()) {
+            VLOG(TRANSPORT) << "Force-detaching transport:" << t->serial;
+            t->SetConnectionState(kCsDetached);
+        }
+
+        VLOG(TRANSPORT) << "transport:" << t->serial << "(" << state << ")";
+        if (t->GetConnectionState() != kCsDetached) {
+            VLOG(TRANSPORT) << "Starting transport:" << t->serial;
+            if (t->connection()->Start()) {
+                send_connect(t);
+            } else {
+                VLOG(TRANSPORT) << "transport:" << t->serial << " failed to start.";
+                return;
+            }
+        }
+#else
+        if (t->type == kTransportUsb) {
+            VLOG(TRANSPORT) << "Force-detaching transport:" << t->serial;
             t->SetConnectionState(kCsDetached);
         } else {
+            VLOG(TRANSPORT) << "Starting transport:" << t->serial;
             t->connection()->Start();
-#if ADB_HOST
-            send_connect(t);
-#endif
         }
+#endif
     }
 
     {
@@ -819,12 +838,10 @@ void kick_all_transports_by_auth_key(std::string_view auth_key) {
 #endif
 
 void register_transport(atransport* transport) {
-    D("transport: %s registered", transport->serial.c_str());
     fdevent_run_on_looper([=]() { fdevent_register_transport(transport); });
 }
 
 static void remove_transport(atransport* transport) {
-    D("transport: %s removed", transport->serial.c_str());
     fdevent_run_on_looper([=]() { fdevent_unregister_transport(transport); });
 }
 
@@ -833,7 +850,7 @@ static void transport_destroy(atransport* t) {
     CHECK(t != nullptr);
 
     std::lock_guard<std::recursive_mutex> lock(transport_lock);
-    LOG(INFO) << "destroying transport " << t->serial_name();
+    VLOG(TRANSPORT) << "destroying transport " << t->serial_name();
     t->connection()->Stop();
 #if ADB_HOST
     if (t->IsTcpDevice() && !t->kicked()) {
@@ -1568,8 +1585,8 @@ void kick_all_tcp_devices() {
 }
 
 #if ADB_HOST
-void register_usb_transport(std::shared_ptr<Connection> connection, const char* serial,
-                            const char* devpath, unsigned writeable) {
+void register_libusb_transport(std::shared_ptr<Connection> connection, const char* serial,
+                               const char* devpath, unsigned writeable) {
     atransport* t = new atransport(writeable ? kCsOffline : kCsNoPerm);
     if (serial) {
         t->serial = serial;
