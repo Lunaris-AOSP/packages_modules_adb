@@ -116,6 +116,29 @@ uint32_t calculate_apacket_checksum(const apacket* p) {
     return sum;
 }
 
+std::string command_to_string(uint32_t cmd) {
+    switch (cmd) {
+        case A_SYNC:
+            return "A_SYNC";
+        case A_CNXN:
+            return "A_CNXN";
+        case A_OPEN:
+            return "A_OPEN";
+        case A_OKAY:
+            return "A_OKAY";
+        case A_CLSE:
+            return "A_CLSE";
+        case A_WRTE:
+            return "A_WRTE";
+        case A_AUTH:
+            return "A_AUTH";
+        case A_STLS:
+            return "A_STLS";
+        default:
+            return "UNKNOWN (" + std::to_string(cmd) + ")";
+    }
+}
+
 std::string to_string(ConnectionState state) {
     switch (state) {
         case kCsOffline:
@@ -142,8 +165,8 @@ std::string to_string(ConnectionState state) {
             return "connecting";
         case kCsDetached:
             return "detached";
-        default:
-            return "unknown";
+        case kCsAny:
+            return "any";
     }
 }
 

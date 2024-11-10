@@ -282,8 +282,6 @@ std::string getEmulatorSerialString(int console_port) {
 int init_socket_transport(atransport* t, unique_fd fd, int adb_port, bool is_emulator) {
     int fail = 0;
 
-    t->type = kTransportLocal;
-
     if (is_emulator) {
         auto emulator_connection = std::make_unique<EmulatorConnection>(std::move(fd), adb_port);
         t->SetConnection(

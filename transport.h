@@ -265,8 +265,9 @@ class atransport : public enable_weak_from_this<atransport> {
 
     using ReconnectCallback = std::function<ReconnectResult(atransport*)>;
 
-    atransport(ReconnectCallback reconnect, ConnectionState state)
+    atransport(TransportType t, ReconnectCallback reconnect, ConnectionState state)
         : id(NextTransportId()),
+          type(t),
           kicked_(false),
           connection_state_(state),
           connection_(nullptr),
@@ -280,8 +281,8 @@ class atransport : public enable_weak_from_this<atransport> {
         protocol_version = A_VERSION_MIN;
         max_payload = MAX_PAYLOAD;
     }
-    atransport(ConnectionState state = kCsOffline)
-        : atransport([](atransport*) { return ReconnectResult::Abort; }, state) {}
+    atransport(TransportType t, ConnectionState state = kCsOffline)
+        : atransport(t, [](atransport*) { return ReconnectResult::Abort; }, state) {}
     ~atransport();
 
     int Write(apacket* p);

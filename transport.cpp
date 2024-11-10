@@ -778,13 +778,8 @@ static void fdevent_register_transport(atransport* t) {
             }
         }
 #else
-        if (t->type == kTransportUsb) {
-            VLOG(TRANSPORT) << "Force-detaching transport:" << t->serial;
-            t->SetConnectionState(kCsDetached);
-        } else {
-            VLOG(TRANSPORT) << "Starting transport:" << t->serial;
-            t->connection()->Start();
-        }
+        VLOG(TRANSPORT) << "Starting transport:" << t->serial;
+        t->connection()->Start();
 #endif
     }
 
@@ -1507,7 +1502,7 @@ bool validate_transport_list(const std::list<atransport*>& list, const std::stri
 
 bool register_socket_transport(unique_fd s, std::string serial, int port, bool is_emulator,
                                atransport::ReconnectCallback reconnect, bool use_tls, int* error) {
-    atransport* t = new atransport(std::move(reconnect), kCsOffline);
+    atransport* t = new atransport(kTransportLocal, std::move(reconnect), kCsOffline);
     t->use_tls = use_tls;
     t->serial = std::move(serial);
 
@@ -1587,7 +1582,7 @@ void kick_all_tcp_devices() {
 #if ADB_HOST
 void register_libusb_transport(std::shared_ptr<Connection> connection, const char* serial,
                                const char* devpath, unsigned writeable) {
-    atransport* t = new atransport(writeable ? kCsOffline : kCsNoPerm);
+    atransport* t = new atransport(kTransportUsb, writeable ? kCsOffline : kCsNoPerm);
     if (serial) {
         t->serial = serial;
     }
@@ -1596,7 +1591,6 @@ void register_libusb_transport(std::shared_ptr<Connection> connection, const cha
     }
 
     t->SetConnection(std::move(connection));
-    t->type = kTransportUsb;
 
     {
         std::lock_guard<std::recursive_mutex> lock(transport_lock);
@@ -1608,7 +1602,7 @@ void register_libusb_transport(std::shared_ptr<Connection> connection, const cha
 
 void register_usb_transport(usb_handle* usb, const char* serial, const char* devpath,
                             unsigned writeable) {
-    atransport* t = new atransport(writeable ? kCsOffline : kCsNoPerm);
+    atransport* t = new atransport(kTransportUsb, writeable ? kCsOffline : kCsNoPerm);
 
     D("transport: %p init'ing for usb_handle %p (sn='%s')", t, usb, serial ? serial : "");
     init_usb_transport(t, usb);

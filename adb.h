@@ -47,6 +47,7 @@ constexpr size_t LINUX_MAX_SOCKET_SIZE = 4194304;
 #define A_WRTE 0x45545257
 #define A_AUTH 0x48545541
 #define A_STLS 0x534C5453
+std::string command_to_string(uint32_t cmd);
 
 // ADB protocol version.
 // Version revision:

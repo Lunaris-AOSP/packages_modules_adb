@@ -217,6 +217,7 @@ libadb_srcs = [
     "adb_trace.cpp",
     "adb_unique_fd.cpp",
     "adb_utils.cpp",
+    "apacket_reader.cpp",
     "fdevent/fdevent.cpp",
     "services.cpp",
     "sockets.cpp",
@@ -400,6 +401,24 @@ cc_test_host {
             enabled: true,
             ldflags: ["-municode"],
             shared_libs: ["AdbWinApi"],
+        },
+        // TODO: Create an asan_default rule and use it for adb_asan target
+        // and ALL unit tests.
+        linux: {
+            sanitize: {
+                address: true,
+            },
+            strip: {
+                none: true,
+            },
+        },
+        darwin: {
+            sanitize: {
+                address: true,
+            },
+            strip: {
+                none: true,
+            },
         },
     },
 
