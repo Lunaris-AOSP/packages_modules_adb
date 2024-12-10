@@ -1152,7 +1152,7 @@ static int logcat(int argc, const char** argv) {
     char* log_tags = getenv("ANDROID_LOG_TAGS");
     std::string quoted = escape_arg(log_tags == nullptr ? "" : log_tags);
 
-    std::string cmd = "export ANDROID_LOG_TAGS=\"" + quoted + "\"; exec logcat";
+    std::string cmd = "export ANDROID_LOG_TAGS=" + quoted + "; exec logcat";
 
     if (!strcmp(argv[0], "longcat")) {
         cmd += " -v long";
