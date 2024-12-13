@@ -301,7 +301,7 @@ static void deferred_close(unique_fd fd) {
                 // There's potentially more data to read.
                 auto duration = std::chrono::steady_clock::now() - socket_info->begin;
                 if (duration > 1s) {
-                    LOG(WARNING) << "timeout expired while flushing socket, closing";
+                    LOG(WARNING) << "timeout expired while reading data after flushing socket, closing";
                 } else {
                     return;
                 }

@@ -70,10 +70,7 @@ cc_library {
     defaults: ["libadb_crypto_defaults"],
 
     min_sdk_version: "30",
-    apex_available: [
-        "com.android.adbd",
-        "test_com.android.adbd",
-    ],
+    apex_available: ["com.android.adbd"],
 }
 
 // For running atest (b/147158681)

@@ -69,10 +69,7 @@ cc_library {
         "//packages/modules/adb/apex:__subpackages__",
     ],
     min_sdk_version: "30",
-    apex_available: [
-        "com.android.adbd",
-        "test_com.android.adbd",
-    ],
+    apex_available: ["com.android.adbd"],
 
     // libadbconnection_client doesn't need an embedded build number.
     use_version_lib: false,

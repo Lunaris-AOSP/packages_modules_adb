@@ -45,6 +45,7 @@ apex_test {
     defaults: ["com.android.adbd-defaults"],
     manifest: "test_apex_manifest.json",
     file_contexts: ":com.android.adbd-file_contexts",
+    apex_available_name: "com.android.adbd",
     installable: false,
 }
 

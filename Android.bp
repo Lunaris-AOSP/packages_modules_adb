@@ -359,10 +359,7 @@ cc_library {
         "//packages/modules/adb:__subpackages__",
     ],
 
-    apex_available: [
-        "com.android.adbd",
-        "test_com.android.adbd",
-    ],
+    apex_available: ["com.android.adbd"],
 }
 
 cc_test_host {
