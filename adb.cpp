@@ -199,11 +199,11 @@ void handle_online(atransport *t)
 void handle_offline(atransport *t)
 {
     if (t->GetConnectionState() == kCsOffline) {
-        LOG(INFO) << t->serial_name() << ": already offline";
+        VLOG(ADB) << t->serial_name() << ": already offline";
         return;
     }
 
-    LOG(INFO) << t->serial_name() << ": offline";
+    VLOG(ADB) << t->serial_name() << ": offline";
 
 #if !ADB_HOST && defined(__ANDROID__)
     DecrementActiveConnections();
@@ -535,13 +535,13 @@ void handle_packet(apacket *p, atransport *t)
         s->peer->peer = s;
 
         if (t->SupportsDelayedAck()) {
-            LOG(DEBUG) << "delayed ack available: send buffer = " << send_bytes;
+            VLOG(PACKETS) << "delayed ack available: send buffer = " << send_bytes;
             s->available_send_bytes = send_bytes;
 
             // TODO: Make this adjustable at connection time?
             send_ready(s->id, s->peer->id, t, INITIAL_DELAYED_ACK_BYTES);
         } else {
-            LOG(DEBUG) << "delayed ack unavailable";
+            VLOG(PACKETS) << "delayed ack unavailable";
             send_ready(s->id, s->peer->id, t, 0);
         }
 

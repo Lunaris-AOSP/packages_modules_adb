@@ -150,7 +150,7 @@ struct UsbFfsConnection : public Connection {
           control_fd_(std::move(control)),
           read_fd_(std::move(read)),
           write_fd_(std::move(write)) {
-        LOG(INFO) << "UsbFfsConnection constructed";
+        VLOG(USB) << "UsbFfsConnection constructed";
         worker_event_fd_.reset(eventfd(0, EFD_CLOEXEC));
         if (worker_event_fd_ == -1) {
             PLOG(FATAL) << "failed to create eventfd";
@@ -165,7 +165,7 @@ struct UsbFfsConnection : public Connection {
     }
 
     ~UsbFfsConnection() {
-        LOG(INFO) << "UsbFfsConnection being destroyed";
+        VLOG(USB) << "UsbFfsConnection being destroyed";
         Stop();
         monitor_thread_.join();
 
@@ -180,7 +180,7 @@ struct UsbFfsConnection : public Connection {
     }
 
     virtual bool Write(std::unique_ptr<apacket> packet) override final {
-        LOG(DEBUG) << "USB write: " << dump_header(&packet->msg);
+        VLOG(USB) << "USB write: " << dump_header(&packet->msg);
         auto header = std::make_shared<Block>(sizeof(packet->msg));
         memcpy(header->data(), &packet->msg, sizeof(packet->msg));
 
@@ -260,7 +260,7 @@ struct UsbFfsConnection : public Connection {
 
         monitor_thread_ = std::thread([this]() {
             adb_thread_setname("UsbFfs-monitor");
-            LOG(INFO) << "UsbFfs-monitor thread spawned";
+            VLOG(USB) << "UsbFfs-monitor thread spawned";
 
             bool bound = false;
             bool enabled = false;
@@ -299,7 +299,7 @@ struct UsbFfsConnection : public Connection {
                                << sizeof(event) << ", got " << rc;
                 }
 
-                LOG(INFO) << "USB event: "
+                VLOG(USB) << "USB event: "
                           << to_string(static_cast<usb_functionfs_event_type>(event.type));
 
                 switch (event.type) {
@@ -363,7 +363,7 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_SETUP: {
-                        LOG(INFO) << "received FUNCTIONFS_SETUP control transfer: bRequestType = "
+                        VLOG(USB) << "received FUNCTIONFS_SETUP control transfer: bRequestType = "
                                   << static_cast<int>(event.u.setup.bRequestType)
                                   << ", bRequest = " << static_cast<int>(event.u.setup.bRequest)
                                   << ", wValue = " << static_cast<int>(event.u.setup.wValue)
@@ -371,7 +371,7 @@ struct UsbFfsConnection : public Connection {
                                   << ", wLength = " << static_cast<int>(event.u.setup.wLength);
 
                         if ((event.u.setup.bRequestType & USB_DIR_IN)) {
-                            LOG(INFO) << "acking device-to-host control transfer";
+                            VLOG(USB) << "acking device-to-host control transfer";
                             ssize_t rc = adb_write(control_fd_.get(), "", 0);
                             if (rc != 0) {
                                 PLOG(ERROR) << "failed to write empty packet to host";
@@ -389,7 +389,7 @@ struct UsbFfsConnection : public Connection {
                                         << event.u.setup.wLength;
                             }
 
-                            LOG(INFO) << "control request contents: " << buf;
+                            VLOG(USB) << "control request contents: " << buf;
                             break;
                         }
                     }
@@ -406,7 +406,7 @@ struct UsbFfsConnection : public Connection {
         worker_started_ = true;
         worker_thread_ = std::thread([this]() {
             adb_thread_setname("UsbFfs-worker");
-            LOG(INFO) << "UsbFfs-worker thread spawned";
+            VLOG(USB) << "UsbFfs-worker thread spawned";
 
             for (size_t i = 0; i < kUsbReadQueueDepth; ++i) {
                 read_requests_[i] = CreateReadBlock(next_read_id_++);
@@ -541,8 +541,8 @@ struct UsbFfsConnection : public Connection {
 
         // Notification for completed reads can be received out of order.
         if (block->id().id != needed_read_id_) {
-            LOG(VERBOSE) << "read " << block->id().id << " completed while waiting for "
-                         << needed_read_id_;
+            VLOG(USB) << "read " << block->id().id << " completed while waiting for "
+                      << needed_read_id_;
             return true;
         }
 
@@ -605,7 +605,7 @@ struct UsbFfsConnection : public Connection {
 
         write_requests_.erase(it);
         size_t outstanding_writes = --writes_submitted_;
-        LOG(DEBUG) << "USB write: reaped, down to " << outstanding_writes;
+        VLOG(USB) << "USB write: reaped, down to " << outstanding_writes;
     }
 
     IoWriteBlock CreateWriteBlock(std::shared_ptr<Block> payload, size_t offset, size_t len,
@@ -647,7 +647,7 @@ struct UsbFfsConnection : public Connection {
             CHECK(!write_requests_[writes_submitted_ + i].pending);
             write_requests_[writes_submitted_ + i].pending = true;
             iocbs[i] = &write_requests_[writes_submitted_ + i].control;
-            LOG(VERBOSE) << "submitting write_request " << static_cast<void*>(iocbs[i]);
+            VLOG(USB) << "submitting write_request " << static_cast<void*>(iocbs[i]);
         }
 
         writes_submitted_ += writes_to_submit;
@@ -667,7 +667,7 @@ struct UsbFfsConnection : public Connection {
         for (size_t i = 0; i < writes_submitted_; ++i) {
             struct io_event res;
             if (write_requests_[i].pending == true) {
-                LOG(INFO) << "cancelling pending write# " << i;
+                VLOG(USB) << "cancelling pending write# " << i;
                 io_cancel(aio_context_.get(), &write_requests_[i].control, &res);
             }
         }
@@ -749,9 +749,9 @@ static void usb_ffs_open_thread() {
         }
 
         if (android::base::GetBoolProperty(kPropertyUsbDisabled, false)) {
-            LOG(INFO) << "pausing USB due to " << kPropertyUsbDisabled;
+            VLOG(USB) << "pausing USB due to " << kPropertyUsbDisabled;
             prop_mon.Run();
-            LOG(INFO) << "resuming USB";
+            VLOG(USB) << "resuming USB";
         }
 
         atransport* transport = new atransport(kTransportUsb);

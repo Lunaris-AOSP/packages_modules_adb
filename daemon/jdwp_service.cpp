@@ -268,6 +268,7 @@ static void jdwp_process_event(int socket, unsigned events, void* _proc) {
             goto CloseProcess;
         }
 
+        VLOG(JDWP) << "Received JDWP Process info for pid=" << process_info->pid;
         proc->process = std::move(*process_info);
         jdwp_process_list_updated();
         app_process_list_updated();
@@ -288,6 +289,7 @@ static void jdwp_process_event(int socket, unsigned events, void* _proc) {
 
         proc->out_fds.pop_back();
         if (proc->out_fds.empty()) {
+            VLOG(JDWP) << "Removing FDE_WRITE";
             fdevent_del(proc->fde, FDE_WRITE);
         }
     }
@@ -295,6 +297,7 @@ static void jdwp_process_event(int socket, unsigned events, void* _proc) {
     return;
 
 CloseProcess:
+    VLOG(JDWP) << "Process " << proc->process.pid << " has disconnected";
     bool debuggable = proc->process.debuggable;
     bool profileable = proc->process.profileable;
     proc->RemoveFromList();
@@ -318,8 +321,12 @@ unique_fd create_jdwp_connection_fd(int pid) {
             D("socketpair: (%d,%d)", fds[0], fds[1]);
 
             proc->out_fds.emplace_back(fds[1]);
+            VLOG(JDWP) << "create_jdwp_connection_fd out_fds=" << proc->out_fds.size();
             if (proc->out_fds.size() == 1) {
+                VLOG(JDWP) << "Requesting FDE_WRITE";
                 fdevent_add(proc->fde, FDE_WRITE);
+            } else {
+                VLOG(JDWP) << "Skipping request for FDE_WRITE";
             }
 
             return unique_fd{fds[0]};

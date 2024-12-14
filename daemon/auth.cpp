@@ -255,7 +255,7 @@ void adbd_auth_init() {
 }
 
 void send_auth_request(atransport* t) {
-    LOG(INFO) << "Calling send_auth_request...";
+    VLOG(AUTH) << "Calling send_auth_request...";
 
     if (!adbd_auth_generate_token(t->token, sizeof(t->token))) {
         PLOG(ERROR) << "Error generating token";
@@ -271,19 +271,19 @@ void send_auth_request(atransport* t) {
 }
 
 void adbd_auth_verified(atransport* t) {
-    LOG(INFO) << "adb client authorized";
+    VLOG(AUTH) << "adb client authorized";
     handle_online(t);
     send_connect(t);
 }
 
 static void adb_disconnected(void* unused, atransport* t) {
-    LOG(INFO) << "ADB disconnect";
+    VLOG(AUTH) << "ADB disconnect";
     CHECK(t->auth_id.has_value());
     adbd_auth_notify_disconnect(auth_ctx, t->auth_id.value());
 }
 
 void adbd_auth_confirm_key(atransport* t) {
-    LOG(INFO) << "prompting user to authorize key";
+    VLOG(AUTH) << "prompting user to authorize key";
     t->AddDisconnect(&adb_disconnect);
     if (adbd_auth_prompt_user_with_id) {
         t->auth_id = adbd_auth_prompt_user_with_id(auth_ctx, t->auth_key.data(), t->auth_key.size(),
@@ -301,19 +301,19 @@ void adbd_notify_framework_connected_key(atransport* t) {
 int adbd_tls_verify_cert(X509_STORE_CTX* ctx, std::string* auth_key) {
     if (!auth_required) {
         // Any key will do.
-        LOG(INFO) << __func__ << ": auth not required";
+        VLOG(AUTH) << __func__ << ": auth not required";
         return 1;
     }
 
     bool authorized = false;
     X509* cert = X509_STORE_CTX_get0_cert(ctx);
     if (cert == nullptr) {
-        LOG(INFO) << "got null x509 certificate";
+        VLOG(AUTH) << "got null x509 certificate";
         return 0;
     }
     bssl::UniquePtr<EVP_PKEY> evp_pkey(X509_get_pubkey(cert));
     if (evp_pkey == nullptr) {
-        LOG(INFO) << "got null evp_pkey from x509 certificate";
+        VLOG(AUTH) << "got null evp_pkey from x509 certificate";
         return 0;
     }
 
@@ -337,10 +337,10 @@ int adbd_tls_verify_cert(X509_STORE_CTX* ctx, std::string* auth_key) {
         bssl::UniquePtr<EVP_PKEY> known_evp(EVP_PKEY_new());
         EVP_PKEY_set1_RSA(known_evp.get(), key);
         if (EVP_PKEY_cmp(known_evp.get(), evp_pkey.get())) {
-            LOG(INFO) << "Matched auth_key=" << public_key;
+            VLOG(AUTH) << "Matched auth_key=" << public_key;
             verified = true;
         } else {
-            LOG(INFO) << "auth_key doesn't match [" << public_key << "]";
+            VLOG(AUTH) << "auth_key doesn't match [" << public_key << "]";
         }
         RSA_free(key);
         if (verified) {
@@ -367,7 +367,7 @@ void adbd_auth_tls_handshake(atransport* t) {
     std::thread([t]() {
         std::string auth_key;
         if (t->connection()->DoTlsHandshake(rsa_pkey, &auth_key)) {
-            LOG(INFO) << "auth_key=" << auth_key;
+            VLOG(AUTH) << "auth_key=" << auth_key;
             if (t->IsTcpDevice()) {
                 t->auth_key = auth_key;
                 adbd_wifi_secure_connect(t);
