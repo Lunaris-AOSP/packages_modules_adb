@@ -213,7 +213,8 @@ struct usb_ext_compat_desc os_desc_compat = {
 static struct usb_os_desc_header os_desc_header = {
     .interface = cpu_to_le32(0),
     .dwLength = cpu_to_le32(sizeof(os_desc_header) + sizeof(os_desc_compat)),
-    .bcdVersion = cpu_to_le32(1),
+    // (This is binary-coded decimal "1.00".)
+    .bcdVersion = cpu_to_le32(0x0100),
     .wIndex = cpu_to_le32(4),
     .bCount = cpu_to_le32(1),
     .Reserved = cpu_to_le32(0),
@@ -222,7 +223,8 @@ static struct usb_os_desc_header os_desc_header = {
 static struct usb_os_desc_header os_prop_header = {
     .interface = cpu_to_le32(0),
     .dwLength = cpu_to_le32(sizeof(os_desc_header) + sizeof(os_prop_values)),
-    .bcdVersion = cpu_to_le32(1),
+    // (This is binary-coded decimal "1.00".)
+    .bcdVersion = cpu_to_le32(0x0100),
     .wIndex = cpu_to_le32(5),
     .wCount = cpu_to_le16(1),
 };
