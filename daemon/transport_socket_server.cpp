@@ -56,10 +56,11 @@ void server_socket_thread(std::string_view addr) {
     while (serverfd == -1) {
         errno = 0;
         serverfd = unique_fd{socket_spec_listen(addr, &error, nullptr)};
-        if (errno == EAFNOSUPPORT || errno == EINVAL || errno == EPROTONOSUPPORT) {
-            D("unrecoverable error: '%s'", error.c_str());
-            return;
-        } else if (serverfd < 0) {
+        if (serverfd < 0) {
+            if (errno == EAFNOSUPPORT || errno == EINVAL || errno == EPROTONOSUPPORT) {
+                D("unrecoverable error: '%s'", error.c_str());
+                return;
+            }
             D("server: cannot bind socket yet: %s", error.c_str());
             std::this_thread::sleep_for(1s);
             continue;
