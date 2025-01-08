@@ -2903,12 +2903,16 @@ static std::string ToLower(const std::string& anycase) {
     return str;
 }
 
-extern "C" int main(int argc, char** argv);
+int main(int argc, char** argv);
 
 // Link with -municode to cause this wmain() to be used as the program
 // entrypoint. It will convert the args from UTF-16 to UTF-8 and call the
 // regular main() with UTF-8 args.
-extern "C" int wmain(int argc, wchar_t **argv) {
+//
+// The C++ standard requires that main() be declared without a
+// linkage-specification (not extern "C"). The MSDN docs show that wmain() is
+// also used without extern "C". Neither main() nor wmain() is name-mangled.
+int wmain(int argc, wchar_t** argv) {
     // Convert args from UTF-16 to UTF-8 and pass that to main().
     NarrowArgs narrow_args(argc, argv);
 
