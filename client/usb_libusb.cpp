@@ -404,14 +404,6 @@ struct LibusbConnection : public Connection {
                 continue;
             }
 
-            if (interface.num_altsetting != 1) {
-                // Assume that interfaces with alternate settings aren't adb interfaces.
-                // TODO: Is this assumption valid?
-                LOG(WARNING) << "skipping interface with unexpected num_altsetting at "
-                             << device_address_ << " (interface " << interface_num << ")";
-                continue;
-            }
-
             VLOG(USB) << "found potential adb interface at " << device_address_ << " (interface "
                       << interface_num << ")";
 
