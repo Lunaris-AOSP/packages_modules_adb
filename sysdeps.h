@@ -178,11 +178,11 @@ int unix_isatty(borrowed_fd fd);
 int network_inaddr_any_server(int port, int type, std::string* error);
 
 inline int network_local_client(const char* name, int namespace_id, int type, std::string* error) {
-    abort();
+    abort(); // Windows-only, and libbase logging conflicts with Win32 ERROR.
 }
 
 inline int network_local_server(const char* name, int namespace_id, int type, std::string* error) {
-    abort();
+    abort(); // Windows-only, and libbase logging conflicts with Win32 ERROR.
 }
 
 int network_connect(const std::string& host, int port, int type, int timeout,

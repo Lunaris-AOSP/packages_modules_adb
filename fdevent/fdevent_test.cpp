@@ -261,12 +261,12 @@ TEST_F(FdeventTest, timeout) {
                 } else if (rc == 1) {
                     event = TimeoutEvent::read;
                 } else {
-                    abort();
+                    FAIL() << "unexpected read() result: " << rc;
                 }
             } else if ((events & FDE_TIMEOUT)) {
                 event = TimeoutEvent::timeout;
             } else {
-                abort();
+                FAIL() << "unexpected events: " << events;
             }
 
             CHECK_EQ(fde, test->fde);

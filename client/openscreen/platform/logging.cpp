@@ -47,7 +47,8 @@ void LogWithLevel(LogLevel level, const char* file, int line, std::stringstream 
 }
 
 [[noreturn]] void Break() {
-    std::abort();
+    LOG(FATAL) << "openscreen Break() called";
+    abort(); // LOG(FATAL) isn't [[noreturn]].
 }
 
 }  // namespace openscreen

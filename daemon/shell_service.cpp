@@ -509,14 +509,15 @@ bool Subprocess::StartThread(std::unique_ptr<Subprocess> subprocess, std::string
 int Subprocess::OpenPtyChildFd(const char* pts_name, unique_fd* error_sfd) {
     int child_fd = adb_open(pts_name, O_RDWR | O_CLOEXEC);
     if (child_fd == -1) {
+        int saved_errno = errno;
         // Don't use WriteFdFmt; since we're in the fork() child we don't want
         // to allocate any heap memory to avoid race conditions.
-        const char* messages[] = {"child failed to open pseudo-term slave ",
-                                  pts_name, ": ", strerror(errno)};
+        const char* messages[] = {"child failed to open pts ",
+                                  pts_name, ": ", strerror(saved_errno)};
         for (const char* message : messages) {
             WriteFdExactly(*error_sfd, message);
         }
-        abort();
+        LOG(FATAL) << "child failed to open pts " << pts_name << ": " << strerror(saved_errno);
     }
 
     if (make_pty_raw_) {
@@ -525,7 +526,7 @@ int Subprocess::OpenPtyChildFd(const char* pts_name, unique_fd* error_sfd) {
             int saved_errno = errno;
             WriteFdExactly(*error_sfd, "tcgetattr failed: ");
             WriteFdExactly(*error_sfd, strerror(saved_errno));
-            abort();
+            LOG(FATAL) << "tcgetattr() failed: " << strerror(saved_errno);
         }
 
         cfmakeraw(&tattr);
@@ -533,7 +534,7 @@ int Subprocess::OpenPtyChildFd(const char* pts_name, unique_fd* error_sfd) {
             int saved_errno = errno;
             WriteFdExactly(*error_sfd, "tcsetattr failed: ");
             WriteFdExactly(*error_sfd, strerror(saved_errno));
-            abort();
+            LOG(FATAL) << "tcsetattr() failed: " << strerror(saved_errno);
         }
     }
 
