@@ -39,6 +39,7 @@
 #include "adb_wifi.h"
 #include "client/transport_client.h"
 #include "client/usb.h"
+#include "client/usb_libusb_hotplug.h"
 #include "commandline.h"
 #include "sysdeps/chrono.h"
 #include "transport.h"

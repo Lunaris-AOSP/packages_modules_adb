@@ -35,7 +35,9 @@
 
 #include <adbconnection/server.h>
 #include <android-base/cmsg.h>
+#include <android-base/file.h>
 #include <android-base/unique_fd.h>
+#include <processgroup/processgroup.h>
 
 #include "adb.h"
 #include "adb_io.h"
@@ -305,34 +307,75 @@ CloseProcess:
     if (debuggable || profileable) app_process_list_updated();
 }
 
-unique_fd create_jdwp_connection_fd(int pid) {
-    D("looking for pid %d in JDWP process list", pid);
+static bool is_process_in_freezer(const ProcessInfo& info) {
+    // Check "/sys/fs/cgroup/apps/uid_{}/pid_{}/cgroup.freeze". Since "apps" is configurable,
+    // use libprocessgroup to make sure we always have the right path.
+    std::string path;
+    if (!CgroupGetAttributePathForProcess("FreezerState", info.uid, info.pid, path)) {
+        VLOG(JDWP) << std::format("Failed to build frozen path of '{}' (got '{}')", info.pid, path);
+        return false;
+    }
+
+    std::string content;
+    if (!android::base::ReadFileToString(path, &content)) {
+        VLOG(JDWP) << std::format("Failed to read ({})", path);
+        return false;
+    }
+
+    bool is_frozen = content == "1\n";
+    VLOG(JDWP) << std::format("Checking if pid {} is frozen at '{}' = '{}'", info.pid, path,
+                              content);
+
+    if (is_frozen) {
+        LOG(WARNING) << std::format("According to '{}'(='{}'), pid {} is frozen", path, content,
+                                    info.pid);
+    }
+    return is_frozen;
+}
+
+static unique_fd send_socket_to_process(JdwpProcess& proc) {
+    // Process in the cached apps freezer don't get scheduled.
+    // Returning a socket will hang the debugger and leak a fd until the app is taken
+    // out of the freezer. Fail instead.
+    if (is_process_in_freezer(proc.process)) {
+        ProcessInfo& info = proc.process;
+        LOG(WARNING) << std::format("Process {} ({}) is frozen. Denying JDWP connection", info.pid,
+                                    info.process_name);
+        return unique_fd{};
+    }
+
+    int fds[2];
+    if (adb_socketpair(fds) < 0) {
+        LOG(WARNING) << std::format("{}: socket pair creation failed: {}", __FUNCTION__,
+                                    strerror(errno));
+        return unique_fd{};
+    }
+
+    VLOG(JDWP) << std::format("socketpair: ({},{})", fds[0], fds[1]);
+    proc.out_fds.emplace_back(fds[1]);
+    if (proc.out_fds.size() == 1) {
+        fdevent_add(proc.fde, FDE_WRITE);
+    }
+
+    return unique_fd{fds[0]};
+}
+
+unique_fd create_jdwp_connection_fd(pid_t pid) {
+    VLOG(JDWP) << std::format("looking for pid {} in JDWP process list", pid);
 
     for (auto& proc : _jdwp_list) {
         // Don't allow JDWP connection to a non-debuggable process.
-        if (!proc->process.debuggable) continue;
-        if (proc->process.pid == static_cast<uint64_t>(pid)) {
-            int fds[2];
-
-            if (adb_socketpair(fds) < 0) {
-                D("%s: socket pair creation failed: %s", __FUNCTION__, strerror(errno));
-                return unique_fd{};
-            }
-            D("socketpair: (%d,%d)", fds[0], fds[1]);
-
-            proc->out_fds.emplace_back(fds[1]);
-            VLOG(JDWP) << "create_jdwp_connection_fd out_fds=" << proc->out_fds.size();
-            if (proc->out_fds.size() == 1) {
-                VLOG(JDWP) << "Requesting FDE_WRITE";
-                fdevent_add(proc->fde, FDE_WRITE);
-            } else {
-                VLOG(JDWP) << "Skipping request for FDE_WRITE";
-            }
-
-            return unique_fd{fds[0]};
+        if (!proc->process.debuggable) {
+            continue;
         }
+
+        if (static_cast<pid_t>(proc->process.pid) != pid) {
+            continue;
+        }
+
+        return send_socket_to_process(*proc);
     }
-    D("search failed !!");
+    LOG(WARNING) << std::format("search for pid {} failed !!", pid);
     return unique_fd{};
 }
 
@@ -541,7 +584,7 @@ asocket* create_jdwp_service_socket() {
     return nullptr;
 }
 
-unique_fd create_jdwp_connection_fd(int pid) {
+unique_fd create_jdwp_connection_fd(pid_t pid) {
     return {};
 }
 

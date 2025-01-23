@@ -58,6 +58,7 @@
 #if ADB_HOST
 #include <google/protobuf/text_format.h>
 #include "adb_host.pb.h"
+#include "client/detach.h"
 #include "client/usb.h"
 #endif
 
@@ -730,14 +731,6 @@ void update_transports() {
 
 #endif  // ADB_HOST
 
-#if ADB_HOST
-static bool usb_devices_start_detached() {
-    static const char* env = getenv("ADB_LIBUSB_START_DETACHED");
-    static bool result = env && strcmp("1", env) == 0;
-    return is_libusb_enabled() && result;
-}
-#endif
-
 static void fdevent_unregister_transport(atransport* t) {
     VLOG(TRANSPORT) << "unregistering transport: " << t->serial;
 
@@ -762,7 +755,8 @@ static void fdevent_register_transport(atransport* t) {
         t->connection()->SetTransport(t);
 
 #if ADB_HOST
-        if (t->type == kTransportUsb && usb_devices_start_detached()) {
+        if (t->type == kTransportUsb &&
+            attached_devices.ShouldStartDetached(*t->connection().get())) {
             VLOG(TRANSPORT) << "Force-detaching transport:" << t->serial;
             t->SetConnectionState(kCsDetached);
         }
@@ -1089,9 +1083,12 @@ bool atransport::Attach(std::string* error) {
     D("%s: attach", serial.c_str());
     fdevent_check_looper();
 
-    if (!is_libusb_enabled()) {
-        *error = "attach/detach only implemented for libusb backend";
-        return false;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!connection_->SupportsDetach()) {
+            *error = "attach/detach not supported";
+            return false;
+        }
     }
 
     if (GetConnectionState() != ConnectionState::kCsDetached) {
@@ -1116,9 +1113,12 @@ bool atransport::Detach(std::string* error) {
     D("%s: detach", serial.c_str());
     fdevent_check_looper();
 
-    if (!is_libusb_enabled()) {
-        *error = "attach/detach only implemented for libusb backend";
-        return false;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!connection_->SupportsDetach()) {
+            *error = "attach/detach not supported!";
+            return false;
+        }
     }
 
     if (GetConnectionState() == ConnectionState::kCsDetached) {

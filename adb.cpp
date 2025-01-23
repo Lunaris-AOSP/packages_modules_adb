@@ -74,6 +74,7 @@ using namespace std::chrono_literals;
 
 #if ADB_HOST
 #include "adb_host.pb.h"
+#include "client/detach.h"
 #include "client/usb.h"
 #endif
 
@@ -1551,6 +1552,7 @@ HostRequestResult handle_host_request(std::string_view service, TransportType ty
             return HostRequestResult::Handled;
         }
 
+        attached_devices.RegisterAttach(t->serial_name());
         if (t->Attach(&error)) {
             SendOkay(reply_fd,
                      android::base::StringPrintf("%s attached", t->serial_name().c_str()));
@@ -1578,6 +1580,7 @@ HostRequestResult handle_host_request(std::string_view service, TransportType ty
         // function that called us.
         s->transport = nullptr;
 
+        attached_devices.RegisterDetach(t->serial_name());
         if (t->Detach(&error)) {
             SendOkay(reply_fd,
                      android::base::StringPrintf("%s detached", t->serial_name().c_str()));

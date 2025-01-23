@@ -118,6 +118,10 @@ cc_defaults {
         "-UADB_HOST",
         "-DADB_HOST=0",
     ],
+
+    shared_libs: [
+      "libprocessgroup",
+    ],
 }
 
 cc_defaults {
@@ -275,7 +279,10 @@ cc_library_host_static {
         "client/openscreen/platform/udp_socket.cpp",
         "client/auth.cpp",
         "client/adb_wifi.cpp",
+        "client/detach.cpp",
         "client/usb_libusb.cpp",
+        "client/usb_libusb_device.cpp",
+        "client/usb_libusb_hotplug.cpp",
         "client/transport_emulator.cpp",
         "client/mdnsresponder_client.cpp",
         "client/mdns_utils.cpp",

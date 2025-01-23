@@ -39,10 +39,6 @@ bool is_adb_interface(int usb_class, int usb_subclass, int usb_protocol);
 
 bool is_libusb_enabled();
 
-namespace libusb {
-void usb_init();
-}
-
 struct UsbConnection : public BlockingConnection {
     explicit UsbConnection(usb_handle* handle) : handle_(handle) {}
     ~UsbConnection();

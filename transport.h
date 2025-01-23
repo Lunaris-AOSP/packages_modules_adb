@@ -124,6 +124,8 @@ struct Connection {
     // Stop, and reset the device if it's a USB connection.
     virtual void Reset();
 
+    virtual bool SupportsDetach() const { return false; }
+
     virtual bool Attach(std::string* error) {
         *error = "transport type doesn't support attach";
         return false;
