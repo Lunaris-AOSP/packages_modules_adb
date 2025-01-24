@@ -8,3 +8,4 @@
 - [How ADB uses USB Zero-length packets](zero_length_packet.md)
 - [How adbd starts](how_adbd_starts.md)
 - [How burst mode works](delayed_ack.md)
+- [How ADB Wifi works](adb_wifi.md)
