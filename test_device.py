@@ -1899,6 +1899,9 @@ class ServerStatus(unittest.TestCase):
             self.assertTrue("build" in lines[3])
             self.assertTrue("executable_absolute_path" in lines[4])
             self.assertTrue("log_absolute_path" in lines[5])
+            self.assertTrue("os" in lines[6])
+            self.assertTrue("trace_level" in lines[7])
+            self.assertTrue("burst_mode" in lines[8])
 
 
 class DetachSingleServer(unittest.TestCase):

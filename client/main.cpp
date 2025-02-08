@@ -37,6 +37,7 @@
 #include "adb_mdns.h"
 #include "adb_utils.h"
 #include "adb_wifi.h"
+#include "client/mdns_utils.h"
 #include "client/transport_client.h"
 #include "client/usb.h"
 #include "client/usb_libusb_hotplug.h"
@@ -134,7 +135,7 @@ int adb_server_main(int is_daemon, const std::string& socket_spec, const char* o
 
     init_reconnect_handler();
 
-    if (!getenv("ADB_MDNS") || strcmp(getenv("ADB_MDNS"), "0") != 0) {
+    if (mdns::is_enabled()) {
         init_mdns_transport_discovery();
     }
 

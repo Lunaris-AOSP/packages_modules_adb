@@ -1187,8 +1187,8 @@ size_t atransport::get_max_payload() const {
 }
 
 #if ADB_HOST
-static bool delayed_ack_enabled() {
-    static const char* env = getenv("ADB_DELAYED_ACK");
+bool burst_mode_enabled() {
+    static const char* env = getenv("ADB_BURST_MODE");
     static bool result = env && strcmp(env, "1") == 0;
     return result;
 }
@@ -1228,7 +1228,7 @@ const FeatureSet& supported_features() {
         // clang-format on
 
 #if ADB_HOST
-        if (delayed_ack_enabled()) {
+        if (burst_mode_enabled()) {
             result.push_back(kFeatureDelayedAck);
         }
 #else

@@ -74,4 +74,8 @@ std::optional<MdnsInstance> mdns_parse_instance_name(std::string_view name) {
     return std::make_optional<MdnsInstance>(name.substr(0, pos), name.substr(pos + 1), transport);
 }
 
+bool is_enabled() {
+    return !getenv("ADB_MDNS") || strcmp(getenv("ADB_MDNS"), "0") != 0;
+}
+
 }  // namespace mdns

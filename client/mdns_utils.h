@@ -51,4 +51,6 @@ struct MdnsInstance {
 // otherwise returns std::nullopt.
 std::optional<MdnsInstance> mdns_parse_instance_name(std::string_view name);
 
+// Return true if mdns backend is enabled
+bool is_enabled();
 }  // namespace mdns

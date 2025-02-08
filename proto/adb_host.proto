@@ -85,5 +85,8 @@ message AdbServerStatus {
      string executable_absolute_path = 7;
      string log_absolute_path = 8;
      string os = 9;
+     optional string trace_level = 10;
+     optional bool burst_mode = 11;
+     optional bool mdns_enabled = 12;
 }
 
