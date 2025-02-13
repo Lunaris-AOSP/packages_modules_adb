@@ -20,12 +20,14 @@
 #include "adb_utils.h"
 #include "sysdeps.h"
 #include "usb_libusb.h"
+#include "usb_libusb_inhouse_hotplug.h"
 
 #if defined(__linux__)
 #include <sys/inotify.h>
 #include <unistd.h>
 #endif
 
+#include <chrono>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -95,7 +97,7 @@ static void device_disconnected(libusb_device* dev) {
                 connection->Stop();
                 VLOG(USB) << "libusb_hotplug: device disconnected: (Stop requested)";
                 if (connection->IsDetached() && connection->transport_ != nullptr) {
-                    connection->ReportErrorToTransport("Detached device has disconnected");
+                    connection->OnError("Detached device has disconnected");
                 }
             } else {
                 VLOG(USB) << "libusb_hotplug: device disconnected: (Already destroyed)";
@@ -198,8 +200,8 @@ static void hotplug_thread() {
     }
 }
 
-static LIBUSB_CALL int hotplug_callback(libusb_context*, libusb_device* device,
-                                        libusb_hotplug_event event, void*) {
+LIBUSB_CALL int hotplug_callback(libusb_context*, libusb_device* device, libusb_hotplug_event event,
+                                 void*) {
     // We're called with the libusb lock taken. Call these on a separate thread outside of this
     // function so that the usb_handle mutex is always taken before the libusb mutex.
     static std::once_flag once;
@@ -214,16 +216,8 @@ static LIBUSB_CALL int hotplug_callback(libusb_context*, libusb_device* device,
 
 namespace libusb {
 
-void usb_init() {
-    VLOG(USB) << "initializing libusb...";
-    int rc = libusb_init(nullptr);
-    if (rc != 0) {
-        LOG(WARNING) << "failed to initialize libusb: " << libusb_error_name(rc);
-        return;
-    }
-
-    // Register the hotplug callback.
-    rc = libusb_hotplug_register_callback(
+static void usb_init_libusb_hotplug() {
+    int rc = libusb_hotplug_register_callback(
             nullptr,
             static_cast<libusb_hotplug_event>(LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED |
                                               LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT),
@@ -243,4 +237,31 @@ void usb_init() {
     }).detach();
 }
 
+static void usb_init_inhouse_hotplug() {
+    // Spawn a thread for handling USB events
+    std::thread([]() {
+        adb_thread_setname("libusb_inhouse_hotplug");
+        struct timeval timeout{(time_t)libusb_inhouse_hotplug::kScan_rate_s.count(), 0};
+        while (true) {
+            VLOG(USB) << "libusb thread iteration";
+            libusb_handle_events_timeout_completed(nullptr, &timeout, nullptr);
+            libusb_inhouse_hotplug::scan();
+        }
+    }).detach();
+}
+
+void usb_init() {
+    VLOG(USB) << "initializing libusb...";
+    int rc = libusb_init(nullptr);
+    if (rc != 0) {
+        LOG(WARNING) << "failed to initialize libusb: " << libusb_error_name(rc);
+        return;
+    }
+
+    if (false && libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG)) {
+        usb_init_libusb_hotplug();
+    } else {
+        usb_init_inhouse_hotplug();
+    }
+}
 }  // namespace libusb

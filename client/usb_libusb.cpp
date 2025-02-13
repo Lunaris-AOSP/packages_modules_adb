@@ -16,9 +16,11 @@
 
 #include "usb_libusb.h"
 
-#include "adb_trace.h"
 #include "android-base/logging.h"
+
+#include "adb_trace.h"
 #include "client/detach.h"
+#include "client/usb_libusb_inhouse_hotplug.h"
 #include "usb.h"
 
 using namespace std::chrono_literals;
@@ -38,19 +40,29 @@ LibUsbConnection::~LibUsbConnection() {
     Stop();
 }
 
-void LibUsbConnection::ReportErrorToTransport(const std::string& reason) {
-    std::call_once(this->error_flag_, [this, reason]() { transport_->HandleError(reason); });
+void LibUsbConnection::OnError(const std::string& reason) {
+    std::call_once(this->error_flag_, [this, reason]() {
+        // When a Windows machine goes to sleep it powers off all its USB host controllers to save
+        // energy. When the machine awakens, it powers them up which causes all the endpoints
+        // to be closed (which generates a read/write failure leading to us Close()ing the device).
+        // The USB device also briefly goes away and comes back with the exact same properties
+        // (including address). This makes in-house hotplug miss device reconnection upon wakeup. To
+        // solve that we remove ourselves from the set of known devices.
+        libusb_inhouse_hotplug::report_error(*this);
+
+        transport_->HandleError(reason);
+    });
 }
 
 void LibUsbConnection::HandleStop(const std::string& reason) {
-    // If wer are detached, we should not report an error condition to the transport
+    // If we are detached, we should not report an error condition to the transport
     // layer. If a connection is detached it has merely been requested to stop transmitting and
     // release its resources.
     if (detached_) {
         VLOG(USB) << "Not reporting error '" << reason << "' because device " << transport_->serial
                   << " is detached";
     } else {
-        ReportErrorToTransport(reason);
+        OnError(reason);
     }
 }
 
@@ -232,4 +244,8 @@ bool LibUsbConnection::Detach(std::string*) {
 
 bool LibUsbConnection::IsDetached() {
     return detached_;
+}
+
+uint64_t LibUsbConnection::GetSessionId() const {
+    return device_->GetSessionId().id;
 }

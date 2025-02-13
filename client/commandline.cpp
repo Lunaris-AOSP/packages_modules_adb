@@ -43,12 +43,12 @@
 #include <android-base/stringprintf.h>
 #include <android-base/strings.h>
 
-#if !defined(_WIN32)
-#include <sys/ioctl.h>
-#include <termios.h>
-#else
+#if defined(_WIN32)
 #define _POSIX
 #include <signal.h>
+#else
+#include <sys/ioctl.h>
+#include <termios.h>
 #endif
 
 #include <google/protobuf/text_format.h>

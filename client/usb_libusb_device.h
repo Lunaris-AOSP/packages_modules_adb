@@ -26,6 +26,21 @@
 
 #include "libusb/libusb.h"
 
+// A session is started when a device is connected to a workstation. It ends upon its
+// disconnection. For in-house hotplug, we generate a unique identifier based on the device
+// invariants vendor, product (adb vs mtp...), the USB port, and the address (the location
+// in the USB chain). On Windows, the address is always incremented, even if the same device
+// is unplugged and plugged immediately.
+union USBSessionID {
+    uint64_t id;
+    struct {
+        uint8_t address;
+        uint8_t port;
+        uint16_t product;
+        uint16_t vendor;
+    } fields;
+};
+
 // Abstraction layer simplifying libusb_device management
 struct LibUsbDevice {
   public:
@@ -66,6 +81,10 @@ struct LibUsbDevice {
     // with (this also makes sure this is an Android device).
     bool IsInitialized() const;
 
+    USBSessionID GetSessionId() const;
+
+    static USBSessionID GenerateSessionId(libusb_device* device);
+
   private:
     // Make sure device is and Android device, retrieve OS address, retrieve Android serial.
     void Init();
@@ -103,4 +122,6 @@ struct LibUsbDevice {
     uint64_t max_speed_{};
 
     bool initialized_ = false;
+
+    USBSessionID session_;
 };

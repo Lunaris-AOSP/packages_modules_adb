@@ -59,9 +59,12 @@ struct LibUsbConnection : Connection {
 
     bool IsDetached();
 
-    // Report an error condition to the transport layer. This will result
-    // in this connection to be Stopped and destroyed.
-    void ReportErrorToTransport(const std::string& error);
+    // Report an error condition to the upper layer. This will result
+    // in transport calling Stop() and this connection be destroyed
+    // on the fdevent thread.
+    void OnError(const std::string& error);
+
+    uint64_t GetSessionId() const;
 
   private:
     std::atomic<bool> detached_ = false;

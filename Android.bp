@@ -283,6 +283,7 @@ cc_library_host_static {
         "client/usb_libusb.cpp",
         "client/usb_libusb_device.cpp",
         "client/usb_libusb_hotplug.cpp",
+        "client/usb_libusb_inhouse_hotplug.cpp",
         "client/transport_emulator.cpp",
         "client/mdnsresponder_client.cpp",
         "client/mdns_utils.cpp",

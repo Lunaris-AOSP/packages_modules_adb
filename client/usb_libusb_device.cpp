@@ -71,6 +71,7 @@ bool LibUsbDevice::IsInitialized() const {
 
 void LibUsbDevice::Init() {
     initialized_ = OpenDeviceHandle();
+    session_ = GenerateSessionId(device_);
 }
 
 void LibUsbDevice::ReleaseInterface() {
@@ -509,4 +510,24 @@ uint64_t LibUsbDevice::MaxSpeedMbps() {
 
 uint64_t LibUsbDevice::NegotiatedSpeedMbps() {
     return negotiated_speed_;
+}
+
+USBSessionID LibUsbDevice::GenerateSessionId(libusb_device* dev) {
+    libusb_device_descriptor desc{};
+    auto result = libusb_get_device_descriptor(dev, &desc);
+    if (result != LIBUSB_SUCCESS) {
+        LOG(WARNING) << "Unable to retrieve device descriptor: " << libusb_error_name(result);
+        return USBSessionID{};
+    }
+
+    USBSessionID session{};
+    session.fields.vendor = desc.idVendor;
+    session.fields.product = desc.idProduct;
+    session.fields.port = libusb_get_port_number(dev);
+    session.fields.address = libusb_get_device_address(dev);
+    return session;
+}
+
+USBSessionID LibUsbDevice::GetSessionId() const {
+    return session_;
 }

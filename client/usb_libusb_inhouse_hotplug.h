@@ -18,13 +18,10 @@
 
 #include "usb_libusb.h"
 
-#include <libusb/libusb.h>
+#include <chrono>
 
-namespace libusb {
-
-void usb_init();
-}
-
-// Only visible to allow inhouse hotplug to inject events.
-LIBUSB_CALL int hotplug_callback(libusb_context*, libusb_device* device, libusb_hotplug_event event,
-                                 void*);
+namespace libusb_inhouse_hotplug {
+void scan();
+void report_error(const LibUsbConnection& connection);
+extern std::chrono::seconds kScan_rate_s;
+}  // namespace libusb_inhouse_hotplug
