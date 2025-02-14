@@ -438,13 +438,14 @@ class AdbUdpSocket : public UdpSocket {
             }
         }
 
-        if (num_bytes_sent == -1) {
+        // Some VPN result in "short send" where less than the full datagram is reported sent. We
+        // shield ourselves from these and hypothetical "long send" and plain errors by reporting
+        // any unexpected return value.
+        if (num_bytes_sent != (ssize_t)length) {
+            LOG(WARNING) << "Error: sendmsg datagram size=" << length << " sent=" << num_bytes_sent;
             client_->OnSendError(this, ChooseError(errno, Error::Code::kSocketSendFailure));
             return;
         }
-
-        // Validity-check: UDP datagram sendmsg() is all or nothing.
-        CHECK_EQ(static_cast<size_t>(num_bytes_sent), length);
     }
 
     // Sets the DSCP value to use for all messages sent from this socket.

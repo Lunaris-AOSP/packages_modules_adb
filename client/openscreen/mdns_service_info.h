@@ -31,6 +31,9 @@ struct ServiceInfo {
     openscreen::IPAddress v4_address;
     openscreen::IPAddress v6_address;
     uint16_t port;
+
+    std::string v4_address_string() const;
+    std::string v6_address_string() const;
 };  // ServiceInfo
 
 openscreen::ErrorOr<ServiceInfo> DnsSdInstanceEndpointToServiceInfo(

@@ -212,8 +212,7 @@ void ForEachService(const std::unique_ptr<ServiceReceiver>& receiver,
         if (wanted_instance_name.empty() || s.get().instance_name == wanted_instance_name) {
             std::stringstream ss;
             ss << s.get().v4_address;
-            cb(s.get().instance_name.c_str(), s.get().service_name.c_str(), ss.str().c_str(),
-               s.get().port);
+            cb(s.get());
         }
     }
 }
@@ -269,9 +268,9 @@ bool adb_secure_connect_by_service_name(const std::string& instance_name) {
     }
 
     std::optional<MdnsInfo> info;
-    auto cb = [&](const std::string& instance_name, const std::string& service_name,
-                  const std::string& ip_addr,
-                  uint16_t port) { info.emplace(instance_name, service_name, ip_addr, port); };
+    auto cb = [&](const mdns::ServiceInfo& si) {
+        info.emplace(si.instance_name, si.service_name, si.v4_address_string(), si.port);
+    };
     ForEachService(g_state->receivers[kADBSecureConnectServiceRefIndex], instance_name, cb);
     if (info.has_value()) {
         return ConnectAdbSecureDevice(*info);
@@ -301,10 +300,10 @@ std::string mdns_list_discovered_services() {
     }
 
     std::string result;
-    auto cb = [&](const std::string& instance_name, const std::string& service_name,
-                  const std::string& ip_addr, uint16_t port) {
-        result += android::base::StringPrintf("%s\t%s\t%s:%u\n", instance_name.data(),
-                                              service_name.data(), ip_addr.data(), port);
+    auto cb = [&](const mdns::ServiceInfo& si) {
+        result += android::base::StringPrintf("%s\t%s\t%s:%u\n", si.instance_name.data(),
+                                              si.service_name.data(), si.v4_address_string().data(),
+                                              si.port);
     };
 
     for (const auto& receiver : g_state->receivers) {
@@ -331,9 +330,9 @@ std::optional<MdnsInfo> mdns_get_connect_service_info(const std::string& name) {
     }
 
     std::optional<MdnsInfo> info;
-    auto cb = [&](const std::string& instance_name, const std::string& service_name,
-                  const std::string& ip_addr,
-                  uint16_t port) { info.emplace(instance_name, service_name, ip_addr, port); };
+    auto cb = [&](const ServiceInfo& si) {
+        info.emplace(si.instance_name, si.service_name, si.v4_address_string(), si.port);
+    };
 
     std::string reg_type;
     // Service name was provided.
@@ -384,9 +383,9 @@ std::optional<MdnsInfo> mdns_get_pairing_service_info(const std::string& name) {
     }
 
     std::optional<MdnsInfo> info;
-    auto cb = [&](const std::string& instance_name, const std::string& service_name,
-                  const std::string& ip_addr,
-                  uint16_t port) { info.emplace(instance_name, service_name, ip_addr, port); };
+    auto cb = [&](const ServiceInfo& si) {
+        info.emplace(si.instance_name, si.service_name, si.v4_address_string(), si.port);
+    };
 
     std::string reg_type;
     // Verify it's a pairing service if user explicitly inputs it.

@@ -303,15 +303,15 @@ void ResolvedService::ForEachService(const ServiceRegistry& services,
     InitAdbServiceRegistries();
 
     for (const auto& service : services) {
-        auto service_name = service->service_name();
-        auto reg_type = service->reg_type();
-        auto ip = service->ip_address();
-        auto port = service->port();
-
+        const auto ivp4 = openscreen::IPAddress::Parse(service->ip_address()).value();
+        // Bonjour doesn't resolve ipv6 currently so we just use "any" address.
+        const auto ivp6 = openscreen::IPAddress::Parse("::").value();
+        mdns::ServiceInfo si{service->service_name(), service->reg_type(), ivp4, ivp6,
+                             service->port()};
         if (wanted_service_name.empty()) {
-            cb(service_name.c_str(), reg_type.c_str(), ip.c_str(), port);
-        } else if (service_name == wanted_service_name) {
-            cb(service_name.c_str(), reg_type.c_str(), ip.c_str(), port);
+            cb(si);
+        } else if (service->service_name() == wanted_service_name) {
+            cb(si);
         }
     }
 }
@@ -578,10 +578,10 @@ std::string mdns_check() {
 
 std::string mdns_list_discovered_services() {
     std::string result;
-    auto cb = [&](const std::string& service_name, const std::string& reg_type,
-                  const std::string& ip_addr, uint16_t port) {
-        result += android::base::StringPrintf("%s\t%s\t%s:%u\n", service_name.c_str(),
-                                              reg_type.c_str(), ip_addr.c_str(), port);
+    auto cb = [&](const mdns::ServiceInfo& si) {
+        result += android::base::StringPrintf("%s\t%s\t%s:%u\n", si.instance_name.c_str(),
+                                              si.service_name.c_str(),
+                                              si.v4_address_string().c_str(), si.port);
     };
 
     ResolvedService::ForEachService(*ResolvedService::sAdbTransportServices, "", cb);
@@ -607,9 +607,9 @@ std::optional<MdnsInfo> mdns_get_connect_service_info(const std::string& name) {
     }
 
     std::optional<MdnsInfo> info;
-    auto cb = [&](const std::string& service_name, const std::string& reg_type,
-                  const std::string& ip_addr,
-                  uint16_t port) { info.emplace(service_name, reg_type, ip_addr, port); };
+    auto cb = [&](const mdns::ServiceInfo& si) {
+        info.emplace(si.instance_name, si.service_name, si.v4_address_string(), si.port);
+    };
 
     std::string reg_type;
     if (!mdns_instance->service_name.empty()) {
@@ -656,9 +656,9 @@ std::optional<MdnsInfo> mdns_get_pairing_service_info(const std::string& name) {
     }
 
     std::optional<MdnsInfo> info;
-    auto cb = [&](const std::string& service_name, const std::string& reg_type,
-                  const std::string& ip_addr,
-                  uint16_t port) { info.emplace(service_name, reg_type, ip_addr, port); };
+    auto cb = [&](const mdns::ServiceInfo& si) {
+        info.emplace(si.instance_name, si.service_name, si.v4_address_string(), si.port);
+    };
 
     // Verify it's a pairing service if user explicitly inputs it.
     if (!mdns_instance->service_name.empty()) {

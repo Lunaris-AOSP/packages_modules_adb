@@ -22,6 +22,18 @@ using namespace openscreen;
 
 namespace mdns {
 
+std::string ServiceInfo::v4_address_string() const {
+    std::stringstream ss;
+    ss << v4_address;
+    return ss.str();
+}
+
+std::string ServiceInfo::v6_address_string() const {
+    std::stringstream ss;
+    ss << v6_address;
+    return ss.str();
+}
+
 ErrorOr<ServiceInfo> DnsSdInstanceEndpointToServiceInfo(
         const discovery::DnsSdInstanceEndpoint& endpoint) {
     ServiceInfo service_info;
