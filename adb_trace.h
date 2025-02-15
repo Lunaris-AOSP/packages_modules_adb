@@ -42,6 +42,7 @@ enum AdbTrace {
     SHELL,
     INCREMENTAL,
     MDNS,
+    MDNS_STACK,
     NUM_TRACES,
 };
 

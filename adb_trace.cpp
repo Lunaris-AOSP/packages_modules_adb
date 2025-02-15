@@ -131,6 +131,7 @@ static void setup_trace_mask() {
             {"shell", SHELL},
             {"incremental", INCREMENTAL},
             {"mdns", MDNS},
+            {"mdns-stack", MDNS_STACK},
     };
 
     // Make sure we check for ALL enum in AdbTrace.
