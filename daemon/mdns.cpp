@@ -62,7 +62,7 @@ static void mdns_callback(DNSServiceRef /*ref*/,
     }
 }
 
-static void register_mdns_service(int index, int port, const std::string service_name) {
+static void register_mdns_service(int index, int port, const std::string& service_name) {
     std::lock_guard<std::mutex> lock(mdns_lock);
 
 
