@@ -258,7 +258,7 @@ void usb_init() {
         return;
     }
 
-    if (false && libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG)) {
+    if (libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG)) {
         usb_init_libusb_hotplug();
     } else {
         usb_init_inhouse_hotplug();

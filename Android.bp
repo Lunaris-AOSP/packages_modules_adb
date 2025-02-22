@@ -273,7 +273,6 @@ cc_library_host_static {
 
     srcs: libadb_srcs + [
         "client/openscreen/mdns_service_info.cpp",
-        "client/openscreen/mdns_service_watcher.cpp",
         "client/openscreen/platform/logging.cpp",
         "client/openscreen/platform/task_runner.cpp",
         "client/openscreen/platform/udp_socket.cpp",

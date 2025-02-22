@@ -35,6 +35,7 @@
 #include <discovery/common/config.h>
 #include <discovery/common/reporting_client.h>
 #include <discovery/public/dns_sd_service_factory.h>
+#include <discovery/public/dns_sd_service_watcher.h>
 #include <platform/api/network_interface.h>
 #include <platform/api/serial_delete_ptr.h>
 #include <platform/base/error.h>
@@ -46,7 +47,6 @@
 #include "adb_utils.h"
 #include "adb_wifi.h"
 #include "client/mdns_utils.h"
-#include "client/openscreen/mdns_service_watcher.h"
 #include "client/openscreen/platform/task_runner.h"
 #include "fdevent/fdevent.h"
 #include "sysdeps.h"
@@ -55,7 +55,8 @@ namespace {
 
 using namespace mdns;
 using namespace openscreen;
-using ServicesUpdatedState = mdns::ServiceReceiver::ServicesUpdatedState;
+using ServiceWatcher = discovery::DnsSdServiceWatcher<ServiceInfo>;
+using ServicesUpdatedState = ServiceWatcher::ServicesUpdatedState;
 
 struct DiscoveryState;
 DiscoveryState* g_state = nullptr;
@@ -88,7 +89,7 @@ struct DiscoveryState {
     SerialDeletePtr<discovery::DnsSdService> service;
     std::unique_ptr<DiscoveryReportingClient> reporting_client;
     std::unique_ptr<AdbOspTaskRunner> task_runner;
-    std::vector<std::unique_ptr<ServiceReceiver>> receivers;
+    std::vector<std::unique_ptr<ServiceWatcher>> watchers;
     InterfaceInfo interface_info;
 };
 
@@ -179,15 +180,16 @@ void StartDiscovery() {
                 g_state->task_runner.get(), g_state->reporting_client.get(), *g_state->config);
         // Register a receiver for each service type
         for (int i = 0; i < kNumADBDNSServices; ++i) {
-            auto receiver = std::make_unique<ServiceReceiver>(
-                    g_state->service.get(), kADBDNSServices[i], OnServiceReceiverResult);
-            receiver->StartDiscovery();
-            g_state->receivers.push_back(std::move(receiver));
+            auto watcher = std::make_unique<ServiceWatcher>(
+                    g_state->service.get(), kADBDNSServices[i], DnsSdInstanceEndpointToServiceInfo,
+                    OnServiceReceiverResult);
+            watcher->StartDiscovery();
+            g_state->watchers.push_back(std::move(watcher));
 
             if (g_state->reporting_client->GotFatalError()) {
-                for (auto& r : g_state->receivers) {
-                    if (r->is_running()) {
-                        r->StopDiscovery();
+                for (auto& w : g_state->watchers) {
+                    if (w->is_running()) {
+                        w->StopDiscovery();
                     }
                 }
                 g_using_bonjour = true;
@@ -202,7 +204,7 @@ void StartDiscovery() {
     });
 }
 
-void ForEachService(const std::unique_ptr<ServiceReceiver>& receiver,
+void ForEachService(const std::unique_ptr<ServiceWatcher>& receiver,
                     std::string_view wanted_instance_name, adb_secure_foreach_service_callback cb) {
     if (!receiver->is_running()) {
         return;
@@ -262,7 +264,7 @@ bool adb_secure_connect_by_service_name(const std::string& instance_name) {
         return g_adb_mdnsresponder_funcs.adb_secure_connect_by_service_name(instance_name);
     }
 
-    if (!g_state || g_state->receivers.empty()) {
+    if (!g_state || g_state->watchers.empty()) {
         VLOG(MDNS) << "Mdns not enabled";
         return false;
     }
@@ -271,7 +273,7 @@ bool adb_secure_connect_by_service_name(const std::string& instance_name) {
     auto cb = [&](const mdns::ServiceInfo& si) {
         info.emplace(si.instance_name, si.service_name, si.v4_address_string(), si.port);
     };
-    ForEachService(g_state->receivers[kADBSecureConnectServiceRefIndex], instance_name, cb);
+    ForEachService(g_state->watchers[kADBSecureConnectServiceRefIndex], instance_name, cb);
     if (info.has_value()) {
         return ConnectAdbSecureDevice(*info);
     }
@@ -295,7 +297,7 @@ std::string mdns_list_discovered_services() {
         return g_adb_mdnsresponder_funcs.mdns_list_discovered_services();
     }
 
-    if (!g_state || g_state->receivers.empty()) {
+    if (!g_state || g_state->watchers.empty()) {
         return "";
     }
 
@@ -306,7 +308,7 @@ std::string mdns_list_discovered_services() {
                                               si.port);
     };
 
-    for (const auto& receiver : g_state->receivers) {
+    for (const auto& receiver : g_state->watchers) {
         ForEachService(receiver, "", cb);
     }
     return result;
@@ -319,7 +321,7 @@ std::optional<MdnsInfo> mdns_get_connect_service_info(const std::string& name) {
         return g_adb_mdnsresponder_funcs.mdns_get_connect_service_info(name);
     }
 
-    if (!g_state || g_state->receivers.empty()) {
+    if (!g_state || g_state->watchers.empty()) {
         return std::nullopt;
     }
 
@@ -346,7 +348,7 @@ std::optional<MdnsInfo> mdns_get_connect_service_info(const std::string& name) {
         switch (*index) {
             case kADBTransportServiceRefIndex:
             case kADBSecureConnectServiceRefIndex:
-                ForEachService(g_state->receivers[*index], mdns_instance->instance_name, cb);
+                ForEachService(g_state->watchers[*index], mdns_instance->instance_name, cb);
                 break;
             default:
                 D("Not a connectable service name [%s]", reg_type.data());
@@ -357,9 +359,9 @@ std::optional<MdnsInfo> mdns_get_connect_service_info(const std::string& name) {
 
     // No mdns service name provided. Just search for the instance name in all adb connect services.
     // Prefer the secured connect service over the other.
-    ForEachService(g_state->receivers[kADBSecureConnectServiceRefIndex], name, cb);
+    ForEachService(g_state->watchers[kADBSecureConnectServiceRefIndex], name, cb);
     if (!info.has_value()) {
-        ForEachService(g_state->receivers[kADBTransportServiceRefIndex], name, cb);
+        ForEachService(g_state->watchers[kADBTransportServiceRefIndex], name, cb);
     }
 
     return info;
@@ -372,7 +374,7 @@ std::optional<MdnsInfo> mdns_get_pairing_service_info(const std::string& name) {
         return g_adb_mdnsresponder_funcs.mdns_get_pairing_service_info(name);
     }
 
-    if (!g_state || g_state->receivers.empty()) {
+    if (!g_state || g_state->watchers.empty()) {
         return std::nullopt;
     }
 
@@ -406,7 +408,7 @@ std::optional<MdnsInfo> mdns_get_pairing_service_info(const std::string& name) {
         return info;
     }
 
-    ForEachService(g_state->receivers[kADBSecurePairingServiceRefIndex], name, cb);
+    ForEachService(g_state->watchers[kADBSecurePairingServiceRefIndex], name, cb);
 
     return info;
 }
