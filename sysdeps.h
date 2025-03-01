@@ -24,6 +24,13 @@
 #  undef _WIN32
 #endif
 
+// Include this protobuf header first, because it uses some write() calls
+// that we will redefine later. Not all modules that include sysdeps.h use
+// protobufs, so only include it if it exists.
+#if __has_include("google/protobuf/io/coded_stream.h")
+#include "google/protobuf/io/coded_stream.h"
+#endif
+
 #include <errno.h>
 
 #include <optional>
