@@ -1192,8 +1192,8 @@ class FileOperationsTest:
                 dev_md5, _ = device.shell(['md5sum', device_full_path])[0].split()
                 self.assertEqual(temp_file.checksum, dev_md5)
 
-        def test_sync(self):
-            """Sync a host directory to the data partition."""
+        def do_test_sync(self, partition):
+            """Sync a host directory to the given partition."""
 
             try:
                 base_dir = tempfile.mkdtemp()
@@ -1212,7 +1212,7 @@ class FileOperationsTest:
 
                 old_product_out = os.environ.get('ANDROID_PRODUCT_OUT')
                 os.environ['ANDROID_PRODUCT_OUT'] = base_dir
-                device.sync('data')
+                device.sync(partition)
                 if old_product_out is None:
                     del os.environ['ANDROID_PRODUCT_OUT']
                 else:
@@ -1224,6 +1224,16 @@ class FileOperationsTest:
             finally:
                 if base_dir is not None:
                     shutil.rmtree(base_dir)
+
+        def test_sync_data(self):
+            """Sync a host directory to the data partition."""
+
+            self.do_test_sync('data')
+
+        def test_sync_slash_data(self):
+            """Sync a host directory to the data partition with a leading slash."""
+
+            self.do_test_sync('/data')
 
         def test_push_sync(self):
             """Sync a host directory to a specific path."""

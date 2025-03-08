@@ -2078,7 +2078,7 @@ int adb_commandline(int argc, const char** argv) {
                                             "system", "system_ext", "vendor"};
         bool found = false;
         for (const auto& partition : partitions) {
-            if (src == "all" || src == partition) {
+            if (src == "all" || src == partition || (src == "/" + partition)) {
                 std::string src_dir{product_file(partition)};
                 if (!directory_exists(src_dir)) continue;
                 found = true;
