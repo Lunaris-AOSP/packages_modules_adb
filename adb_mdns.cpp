@@ -26,23 +26,10 @@
 
 #include "adb_trace.h"
 
-#define ADB_SECURE_SERVICE_VERSION_TXT_RECORD(ver) ("v=" #ver)
-
-const char* kADBSecurePairingServiceTxtRecord =
-        ADB_SECURE_SERVICE_VERSION_TXT_RECORD(ADB_SECURE_SERVICE_VERSION);
-const char* kADBSecureConnectServiceTxtRecord =
-        ADB_SECURE_SERVICE_VERSION_TXT_RECORD(ADB_SECURE_SERVICE_VERSION);
-
 #define ADB_FULL_MDNS_SERVICE_TYPE(atype) ("_" atype "._tcp")
 const char* kADBDNSServices[] = {ADB_FULL_MDNS_SERVICE_TYPE(ADB_MDNS_SERVICE_TYPE),
                                  ADB_FULL_MDNS_SERVICE_TYPE(ADB_MDNS_TLS_PAIRING_TYPE),
                                  ADB_FULL_MDNS_SERVICE_TYPE(ADB_MDNS_TLS_CONNECT_TYPE)};
-
-const char* kADBDNSServiceTxtRecords[] = {
-        nullptr,
-        kADBSecurePairingServiceTxtRecord,
-        kADBSecureConnectServiceTxtRecord,
-};
 
 #if ADB_HOST
 namespace {

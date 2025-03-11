@@ -15,6 +15,7 @@
  */
 
 #include "mdns.h"
+
 #include "adb_mdns.h"
 #include "sysdeps.h"
 
@@ -33,7 +34,10 @@
 using namespace std::chrono_literals;
 
 static std::mutex& mdns_lock = *new std::mutex();
-static int port;
+
+// TCP socket port ADBd is listening for incoming connections
+static int tcp_port;
+
 static DNSServiceRef mdns_refs[kNumADBDNSServices];
 static bool mdns_registered[kNumADBDNSServices];
 
@@ -62,37 +66,33 @@ static void mdns_callback(DNSServiceRef /*ref*/,
     }
 }
 
+static std::vector<char> buildTxtRecord() {
+    std::map<std::string, std::string> attributes;
+    attributes["v"] = std::to_string(ADB_SECURE_SERVICE_VERSION);
+    attributes["name"] = android::base::GetProperty("ro.product.model", "");
+    attributes["api"] = android::base::GetProperty("ro.build.version.sdk", "");
+
+    // See https://tools.ietf.org/html/rfc6763 for the format of DNS TXT record.
+    std::vector<char> record;
+    for (auto const& [key, val] : attributes) {
+        size_t length = key.size() + val.size() + 1;
+        if (length > 255) {
+            LOG(INFO) << "DNS TXT Record property " << key << "='" << val << "' is too large.";
+            continue;
+        }
+        record.emplace_back(length);
+        std::copy(key.begin(), key.end(), std::back_inserter(record));
+        record.emplace_back('=');
+        std::copy(val.begin(), val.end(), std::back_inserter(record));
+    }
+
+    return record;
+}
+
 static void register_mdns_service(int index, int port, const std::string& service_name) {
     std::lock_guard<std::mutex> lock(mdns_lock);
 
-
-    // https://tools.ietf.org/html/rfc6763
-    // """
-    // The format of the data within a DNS TXT record is one or more
-    // strings, packed together in memory without any intervening gaps or
-    // padding bytes for word alignment.
-    //
-    // The format of each constituent string within the DNS TXT record is a
-    // single length byte, followed by 0-255 bytes of text data.
-    // """
-    //
-    // Therefore:
-    // 1. Begin with the string length
-    // 2. No null termination
-
-    std::vector<char> txtRecord;
-
-    if (kADBDNSServiceTxtRecords[index]) {
-        size_t txtRecordStringLength = strlen(kADBDNSServiceTxtRecords[index]);
-
-        txtRecord.resize(1 +                    // length byte
-                         txtRecordStringLength  // string bytes
-        );
-
-        txtRecord[0] = (char)txtRecordStringLength;
-        memcpy(txtRecord.data() + 1, kADBDNSServiceTxtRecords[index], txtRecordStringLength);
-    }
-
+    auto txtRecord = buildTxtRecord();
     auto error = DNSServiceRegister(
             &mdns_refs[index], 0, 0, service_name.c_str(), kADBDNSServices[index], nullptr, nullptr,
             htobe16((uint16_t)port), (uint16_t)txtRecord.size(),
@@ -120,7 +120,7 @@ static void unregister_mdns_service(int index) {
 static void register_base_mdns_transport() {
     std::string hostname = "adb-";
     hostname += android::base::GetProperty("ro.serialno", "unidentified");
-    register_mdns_service(kADBTransportServiceRefIndex, port, hostname);
+    register_mdns_service(kADBTransportServiceRefIndex, tcp_port, hostname);
 }
 
 static void setup_mdns_thread() {
@@ -186,25 +186,25 @@ static std::string ReadDeviceGuid() {
 
 // Public interface/////////////////////////////////////////////////////////////
 
-void setup_mdns(int port_in) {
+void setup_mdns(int tcp_port_in) {
     // Make sure the adb wifi guid is generated.
     std::string guid = ReadDeviceGuid();
     CHECK(!guid.empty());
-    port = port_in;
+    tcp_port = tcp_port_in;
     std::thread(setup_mdns_thread).detach();
 
     // TODO: Make this more robust against a hard kill.
     atexit(teardown_mdns);
 }
 
-void register_adb_secure_connect_service(int port) {
-    std::thread([port]() {
+void register_adb_secure_connect_service(int tls_port) {
+    std::thread([tls_port]() {
         auto service_name = ReadDeviceGuid();
         if (service_name.empty()) {
             return;
         }
         LOG(INFO) << "Registering secure_connect service (" << service_name << ")";
-        register_mdns_service(kADBSecureConnectServiceRefIndex, port, service_name);
+        register_mdns_service(kADBSecureConnectServiceRefIndex, tls_port, service_name);
     }).detach();
 }
 

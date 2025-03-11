@@ -17,9 +17,11 @@
 #ifndef _DAEMON_MDNS_H_
 #define _DAEMON_MDNS_H_
 
-void setup_mdns(int port);
+// Setup mDNS and declare which TCP port ADBd is currently listening on for non-encrypted traffic.
+void setup_mdns(int tcp_port);
 
-void register_adb_secure_connect_service(int port);
+// mDNS advertise the TLS port ADBd is currently listening on for encrypted traffic.
+void register_adb_secure_connect_service(int tls_port);
 void unregister_adb_secure_connect_service();
 bool is_adb_secure_connect_service_registered();
 
