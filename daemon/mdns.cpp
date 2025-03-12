@@ -17,6 +17,7 @@
 #include "mdns.h"
 
 #include "adb_mdns.h"
+#include "adb_trace.h"
 #include "sysdeps.h"
 
 #include <dns_sd.h>
@@ -30,6 +31,7 @@
 
 #include <android-base/logging.h>
 #include <android-base/properties.h>
+#include <android-base/thread_annotations.h>
 
 using namespace std::chrono_literals;
 
@@ -38,8 +40,8 @@ static std::mutex& mdns_lock = *new std::mutex();
 // TCP socket port ADBd is listening for incoming connections
 static int tcp_port;
 
-static DNSServiceRef mdns_refs[kNumADBDNSServices];
-static bool mdns_registered[kNumADBDNSServices];
+static DNSServiceRef mdns_refs[kNumADBDNSServices] GUARDED_BY(mdns_lock);
+static bool mdns_registered[kNumADBDNSServices] GUARDED_BY(mdns_lock);
 
 void start_mdnsd() {
     if (android::base::GetProperty("init.svc.mdnsd", "") == "running") {
@@ -105,8 +107,8 @@ static void register_mdns_service(int index, int port, const std::string& servic
     } else {
         mdns_registered[index] = true;
     }
-    LOG(INFO) << "adbd mDNS service " << kADBDNSServices[index]
-            << " registered: " << mdns_registered[index];
+    VLOG(MDNS) << "adbd mDNS service " << kADBDNSServices[index]
+               << " registered: " << mdns_registered[index];
 }
 
 static void unregister_mdns_service(int index) {
@@ -203,7 +205,7 @@ void register_adb_secure_connect_service(int tls_port) {
         if (service_name.empty()) {
             return;
         }
-        LOG(INFO) << "Registering secure_connect service (" << service_name << ")";
+        VLOG(MDNS) << "Registering secure_connect service (" << service_name << ")";
         register_mdns_service(kADBSecureConnectServiceRefIndex, tls_port, service_name);
     }).detach();
 }
