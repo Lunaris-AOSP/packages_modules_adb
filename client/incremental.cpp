@@ -194,6 +194,9 @@ std::optional<Process> install(const Files& files, const Args& passthrough_args,
     auto pipe_write_fd_param = std::to_string(cast_handle_to_int(adb_get_os_handle(pipe_write_fd)));
     close_on_exec(pipe_read_fd);
 
+    // We spawn an incremental server that will be up until all blocks have been fed to the
+    // Package Manager. This could take a long time depending on the size of the files to
+    // stream so we use a process able to outlive adb.
     std::vector<std::string> args(std::move(files));
     args.insert(args.begin(), {"inc-server", fd_param, pipe_write_fd_param});
     auto child =
@@ -210,6 +213,9 @@ std::optional<Process> install(const Files& files, const Args& passthrough_args,
     auto killOnExit = [](Process* p) { p->kill(); };
     std::unique_ptr<Process, decltype(killOnExit)> serverKiller(&child, killOnExit);
 
+    // Block until the Package Manager has received enough blocks to declare the installation
+    // successful or failure. Meanwhile, the incremental server is still sending blocks to the
+    // device.
     Result result = wait_for_installation(pipe_read_fd);
     adb_close(pipe_read_fd);
 
@@ -225,6 +231,9 @@ std::optional<Process> install(const Files& files, const Args& passthrough_args,
     return child;
 }
 
+// Wait until the Package Manager returns either "Success" or "Failure". The streaming
+// may not have finished when this happens but PM received all the blocks is needs
+// to decide if installation was ok.
 Result wait_for_installation(int read_fd) {
     static constexpr int maxMessageSize = 256;
     std::vector<char> child_stdout(CHUNK_SIZE);

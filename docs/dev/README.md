@@ -9,3 +9,4 @@
 - [How adbd starts](how_adbd_starts.md)
 - [How burst mode works](delayed_ack.md)
 - [How ADB Wifi works](adb_wifi.md)
+- [How ADB Incremental install works](incremental-install.md)
