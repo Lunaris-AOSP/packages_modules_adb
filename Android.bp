@@ -448,7 +448,6 @@ cc_defaults {
         "client/adb_install.cpp",
         "client/line_printer.cpp",
         "client/fastdeploy.cpp",
-        "client/fastdeploycallbacks.cpp",
         "client/incremental.cpp",
         "client/incremental_server.cpp",
         "client/incremental_utils.cpp",
