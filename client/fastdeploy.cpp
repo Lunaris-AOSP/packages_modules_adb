@@ -228,7 +228,7 @@ std::optional<APKMetaData> extract_metadata(const char* apk_path) {
     std::string dump_out_buffer;
     std::string dump_error_buffer;
     DefaultStandardStreamsCallback cb(&dump_out_buffer, &dump_error_buffer);
-    int returnCode = send_shell_command(dump_command.c_str(), false, &cb);
+    int returnCode = send_shell_command(dump_command, false, &cb);
     if (returnCode >= kInvalidAgentVersion) {
         long agent_version;
         if (!android::base::ParseInt(dump_out_buffer, &agent_version)) {
@@ -241,7 +241,7 @@ std::optional<APKMetaData> extract_metadata(const char* apk_path) {
         // Retry with new agent.
         dump_out_buffer.clear();
         dump_error_buffer.clear();
-        returnCode = send_shell_command(dump_command.c_str(), false, &cb);
+        returnCode = send_shell_command(dump_command, false, &cb);
     }
     if (returnCode != 0) {
         if (returnCode == kInvalidAgentVersion) {
